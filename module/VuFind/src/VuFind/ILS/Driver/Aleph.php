@@ -374,6 +374,7 @@ class Aleph extends AbstractBase implements \Laminas\Log\LoggerAwareInterface,
     protected $dlfbaseurl = null;
 
     /**
+     * Z305 address mapping
      *
      * @var array
      */
@@ -602,7 +603,13 @@ class Aleph extends AbstractBase implements \Laminas\Log\LoggerAwareInterface,
         }
     }
 
-    protected function getDefaultAddressMappings() {
+    /**
+     * Return default Z305 address mapping
+     *
+     * @return array
+     */
+    protected function getDefaultAddressMappings()
+    {
         return [
             'barcode' => 'z304-address-5',
             'fullname' => 'z304-address-1',
@@ -774,10 +781,10 @@ class Aleph extends AbstractBase implements \Laminas\Log\LoggerAwareInterface,
      */
     protected function parseId($id)
     {
-        if (strpos($id, self::RECORD_ID_BASE_SEPARATOR) !== FALSE) {
+        if (strpos($id, self::RECORD_ID_BASE_SEPARATOR) !== false) {
             return explode(self::RECORD_ID_BASE_SEPARATOR, $id, 2);
         } else {
-            return array($this->bib[0], $id);
+            return [$this->bib[0], $id];
         }
     }
 
@@ -1285,10 +1292,16 @@ class Aleph extends AbstractBase implements \Laminas\Log\LoggerAwareInterface,
             if ((string)$z37->{'z37-request-type'} == "Hold Request" || true) {
                 $type = "hold";
                 $seq = null;
-                $itemStatus = preg_replace("/\s[\s]+/", " ", (string) $item->{'status'});
+                $itemStatus = preg_replace(
+                    "/\s[\s]+/", " ", (string)$item->{'status'}
+                );
                 $matches = [];
-                if (preg_match("/Waiting in position ([0-9]+) in queue; current due date ([0-9]+\/[a-z|A-Z]+\/[0-9])+/",
-                    $itemStatus, $matches)) {
+                if (preg_match(
+                    "/Waiting in position ([0-9]+) in queue; current due "
+                    . "date ([0-9]+\/[a-z|A-Z]+\/[0-9])+/",
+                    $itemStatus, $matches
+                )
+                ) {
                     $seq = $matches[1];
                 }
                 $location = (string)$z37->{'z37-pickup-location'};
@@ -1565,7 +1578,7 @@ class Aleph extends AbstractBase implements \Laminas\Log\LoggerAwareInterface,
         $address = $xml->xpath('//address-information')[0];
         foreach ($this->addressMappings as $key => $value) {
             if (!empty($value)) {
-                $profile[$key] = (string) $address->{$value};
+                $profile[$key] = (string)$address->{$value};
             }
         }
         $fullName = $profile['fullname'];
