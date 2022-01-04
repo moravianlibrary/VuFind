@@ -32,6 +32,7 @@ use VuFindSearch\Backend\Exception\BackendException;
 
 use VuFindSearch\Backend\Exception\RemoteErrorException;
 
+use VuFindSearch\Backend\Solr\Document\DocumentInterface;
 use VuFindSearch\Backend\Solr\Response\Json\Terms;
 use VuFindSearch\Exception\InvalidArgumentException;
 use VuFindSearch\Feature\GetIdsInterface;
@@ -39,10 +40,10 @@ use VuFindSearch\Feature\RandomInterface;
 
 use VuFindSearch\Feature\RetrieveBatchInterface;
 use VuFindSearch\Feature\SimilarInterface;
+use VuFindSearch\Feature\WorkExpressionsInterface;
 use VuFindSearch\ParamBag;
 use VuFindSearch\Query\AbstractQuery;
 
-use VuFindSearch\Query\Query;
 use VuFindSearch\Response\RecordCollectionFactoryInterface;
 
 use VuFindSearch\Response\RecordCollectionInterface;
@@ -58,7 +59,7 @@ use VuFindSearch\Response\RecordCollectionInterface;
  */
 class Backend extends AbstractBackend
     implements SimilarInterface, RetrieveBatchInterface, RandomInterface,
-    GetIdsInterface
+    GetIdsInterface, WorkExpressionsInterface
 {
     /**
      * Limit for records per query in a batch retrieval.
@@ -123,7 +124,33 @@ class Backend extends AbstractBackend
      *
      * @return RecordCollectionInterface
      */
-    public function search(AbstractQuery $query, $offset, $limit,
+    public function search(
+        AbstractQuery $query,
+        $offset,
+        $limit,
+        ParamBag $params = null
+    ) {
+        $json = $this->rawJsonSearch($query, $offset, $limit, $params);
+        $collection = $this->createRecordCollection($json);
+        $this->injectSourceIdentifier($collection);
+
+        return $collection;
+    }
+
+    /**
+     * Perform a search and return a raw response.
+     *
+     * @param AbstractQuery $query  Search query
+     * @param int           $offset Search offset
+     * @param int           $limit  Search limit
+     * @param ParamBag      $params Search backend parameters
+     *
+     * @return string
+     */
+    public function rawJsonSearch(
+        AbstractQuery $query,
+        $offset,
+        $limit,
         ParamBag $params = null
     ) {
         $params = $params ?: new ParamBag();
@@ -132,11 +159,7 @@ class Backend extends AbstractBackend
         $params->set('rows', $limit);
         $params->set('start', $offset);
         $params->mergeWith($this->getQueryBuilder()->build($query));
-        $response   = $this->connector->search($params);
-        $collection = $this->createRecordCollection($response);
-        $this->injectSourceIdentifier($collection);
-
-        return $collection;
+        return $this->connector->search($params);
     }
 
     /**
@@ -149,7 +172,10 @@ class Backend extends AbstractBackend
      *
      * @return RecordCollectionInterface
      */
-    public function getIds(AbstractQuery $query, $offset, $limit,
+    public function getIds(
+        AbstractQuery $query,
+        $offset,
+        $limit,
         ParamBag $params = null
     ) {
         $params = $params ?: new ParamBag();
@@ -176,7 +202,9 @@ class Backend extends AbstractBackend
      * @return RecordCollectionInterface
      */
     public function random(
-        AbstractQuery $query, $limit, ParamBag $params = null
+        AbstractQuery $query,
+        $limit,
+        ParamBag $params = null
     ) {
         $params = $params ?: new ParamBag();
         $this->injectResponseWriter($params);
@@ -261,7 +289,7 @@ class Backend extends AbstractBackend
         $params = $params ?: new ParamBag();
         $this->injectResponseWriter($params);
 
-        $params->mergeWith($this->getSimilarBuilder()->build($id, $params));
+        $params->mergeWith($this->getSimilarBuilder()->build($id));
         $response   = $this->connector->similar($id, $params);
         $collection = $this->createRecordCollection($response);
         $this->injectSourceIdentifier($collection);
@@ -278,7 +306,10 @@ class Backend extends AbstractBackend
      *
      * @return Terms
      */
-    public function terms($field = null, $start = null, $limit = null,
+    public function terms(
+        $field = null,
+        $start = null,
+        $limit = null,
         ParamBag $params = null
     ) {
         // Support alternate syntax with ParamBag as first parameter:
@@ -326,14 +357,18 @@ class Backend extends AbstractBackend
      * @param int      $page        Result page to return (starts at 0)
      * @param int      $limit       Number of results to return on each page
      * @param ParamBag $params      Additional parameters
-     * POST)
      * @param int      $offsetDelta Delta to use when calculating page
      * offset (useful for showing a few results above the highlighted row)
      *
      * @return array
      */
-    public function alphabeticBrowse($source, $from, $page, $limit = 20,
-        $params = null, $offsetDelta = 0
+    public function alphabeticBrowse(
+        $source,
+        $from,
+        $page,
+        $limit = 20,
+        $params = null,
+        $offsetDelta = 0
     ) {
         $params = $params ?: new ParamBag();
         $this->injectResponseWriter($params);
@@ -343,12 +378,86 @@ class Backend extends AbstractBackend
         $params->set('rows', $limit);
         $params->set('source', $source);
 
+        $response = null;
         try {
             $response = $this->connector->query('browse', $params);
         } catch (RemoteErrorException $e) {
             $this->refineBrowseException($e);
         }
         return $this->deserialize($response);
+    }
+
+    /**
+     * Return work expressions.
+     *
+     * @param string   $id            Id of record to compare with
+     * @param array    $workKeys      Work identification keys
+     * @param ParamBag $defaultParams Search backend parameters
+     *
+     * @return RecordCollectionInterface
+     */
+    public function workExpressions($id, $workKeys, ParamBag $defaultParams = null)
+    {
+        $params = $defaultParams ? clone $defaultParams
+            : new \VuFindSearch\ParamBag();
+        $this->injectResponseWriter($params);
+        $query = [];
+        foreach ($workKeys as $key) {
+            $key = addcslashes($key, '+-&|!(){}[]^"~*?:\\/');
+            $query[] = "work_keys_str_mv:(\"$key\")";
+        }
+        $params->set('q', implode(' OR ', $query));
+        if ($id) {
+            $params->add('fq', sprintf('-id:"%s"', addcslashes($id, '"')));
+        }
+        if (!$params->hasParam('rows')) {
+            $params->add('rows', 100);
+        }
+        if (!$params->hasParam('sort')) {
+            $params->add('sort', 'publishDateSort desc, title_sort asc');
+        }
+        $response = $this->connector->search($params);
+        $collection = $this->createRecordCollection($response);
+        $this->injectSourceIdentifier($collection);
+        return $collection;
+    }
+
+    /**
+     * Write a document to Solr. Return an array of details about the updated index.
+     *
+     * @param DocumentInterface $doc     Document to write
+     * @param ?int              $timeout Timeout value (null for default)
+     * @param string            $handler Handler to use
+     * @param ?ParamBag         $params  Search backend parameters
+     *
+     * @return array
+     */
+    public function writeDocument(
+        DocumentInterface $doc,
+        int $timeout = null,
+        string $handler = 'update',
+        ?ParamBag $params = null
+    ) {
+        $connector = $this->getConnector();
+
+        // If we have a custom timeout, remember the old timeout value and then
+        // override it with a different one:
+        $oldTimeout = null;
+        if (is_int($timeout ?? null)) {
+            $oldTimeout = $connector->getTimeout();
+            $connector->setTimeout($timeout);
+        }
+
+        // Write!
+        $connector->write($doc, $handler ?? 'update', $params);
+
+        // Restore previous timeout value, if necessary:
+        if (null !== $oldTimeout) {
+            $connector->setTimeout($oldTimeout);
+        }
+
+        // Save the core name in the results in case the caller needs it.
+        return ['core' => $connector->getCore()];
     }
 
     /**
@@ -486,7 +595,9 @@ class Backend extends AbstractBackend
                 "Alphabetic Browse index missing.  See " .
                 "https://vufind.org/wiki/indexing:alphabetical_heading_browse for " .
                 "details on generating the index.",
-                $e->getCode(), $e->getResponse(), $e->getPrevious()
+                $e->getCode(),
+                $e->getResponse(),
+                $e->getPrevious()
             );
         }
         throw $e;
