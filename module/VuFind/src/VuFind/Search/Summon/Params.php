@@ -278,6 +278,19 @@ class Params extends \VuFind\Search\Base\Params
     {
         // Which filters should be applied to our query?
         $filterList = $this->getFilterList();
+        $hiddenFilterList = $this->getHiddenFilters();
+        foreach ($hiddenFilterList as $field => $hiddenFilter) {
+            $filterList[] = array_map(
+                function ($value) use ($field) {
+                    return [
+                        'field' => $field,
+                        'value' => $value,
+                        'operator' => 'AND',
+                    ];
+                },
+                $hiddenFilter
+            );
+        }
         if (!empty($filterList)) {
             $orFacets = [];
 
