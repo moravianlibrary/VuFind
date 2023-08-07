@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Support class to build reserves data from CSV file(s).
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki Wiki
  */
+
 namespace VuFind\Reserves;
 
 /**
@@ -107,8 +109,8 @@ class CsvReader
      * @param array|string $files     Array of files to load (or single filename).
      * @param string       $delimiter Delimiter used by file(s).
      * @param string       $template  Template showing field positions within
-     * file(s).  Comma-separated list containing BIB_ID, INSTRUCTOR, COURSE,
-     * DEPARTMENT and/or SKIP.  Default = BIB_ID,COURSE,INSTRUCTOR,DEPARTMENT
+     * file(s). Comma-separated list containing BIB_ID, INSTRUCTOR, COURSE,
+     * DEPARTMENT and/or SKIP. Default = BIB_ID,COURSE,INSTRUCTOR,DEPARTMENT
      *
      * @throws \Exception
      */

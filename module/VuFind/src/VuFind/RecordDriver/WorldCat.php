@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Model for MARC records in WorldCat.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:record_drivers Wiki
  */
+
 namespace VuFind\RecordDriver;
 
 use VuFind\RecordDriver\Feature\MarcAdvancedTrait;
@@ -52,7 +54,7 @@ class WorldCat extends DefaultRecord
      *
      * @param mixed $data Raw data representing the record; Record Model
      * objects are normally constructed by Record Driver objects using data
-     * passed in from a Search Results object.  In this case, $data is a MARCXML
+     * passed in from a Search Results object. In this case, $data is a MARCXML
      * document.
      *
      * @return void
@@ -62,11 +64,6 @@ class WorldCat extends DefaultRecord
         // Ensure that $driver->setRawData($driver->getRawData()) doesn't blow up:
         if (isset($data['fullrecord'])) {
             $data = $data['fullrecord'];
-        }
-
-        // Make sure the XML has an appropriate header:
-        if (strlen($data) > 2 && substr($data, 0, 2) != '<?') {
-            $data = '<?xml version="1.0"?>' . $data;
         }
 
         // Map the WorldCat response into a format that the parent Solr-based

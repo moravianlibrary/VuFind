@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Matomo web analytics view helper for Matomo versions >= 4
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) The National Library of Finland 2014-2021.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Site
  */
+
 namespace VuFind\View\Helper\Root;
 
 use VuFind\RecordDriver\AbstractBase as RecordDriverBase;
@@ -370,7 +372,8 @@ class Matomo extends \Laminas\View\Helper\AbstractHelper
             'Sort' => $params->getSort(),
             'Page' => $params->getPage(),
             'Limit' => $params->getLimit(),
-            'View' => $params->getView()
+            'View' => $params->getView(),
+            'Context' => $this->context ?: 'page',
         ];
     }
 
@@ -405,9 +408,10 @@ class Matomo extends \Laminas\View\Helper\AbstractHelper
         $institutions = $institutions;
 
         return [
+            'Context' => $this->context ?: 'page',
             'RecordFormat' => $formats,
             'RecordData' => "$id|$author|$title",
-            'RecordInstitution' => $institutions
+            'RecordInstitution' => $institutions,
         ];
     }
 
@@ -418,7 +422,9 @@ class Matomo extends \Laminas\View\Helper\AbstractHelper
      */
     protected function getLightboxCustomData(): array
     {
-        return [];
+        return [
+            'Context' => $this->context ?: 'page',
+        ];
     }
 
     /**
@@ -428,7 +434,9 @@ class Matomo extends \Laminas\View\Helper\AbstractHelper
      */
     protected function getGenericCustomData(): array
     {
-        return [];
+        return [
+            'Context' => $this->context ?: 'page',
+        ];
     }
 
     /**
@@ -438,13 +446,19 @@ class Matomo extends \Laminas\View\Helper\AbstractHelper
      */
     protected function getOpeningTrackingCode(): string
     {
+        $escape = $this->getView()->plugin('escapejs');
+        $cookieConsent = $this->getView()->plugin('cookieConsent');
+        $pageUrl = $escape($this->getPageUrl());
         $code = <<<EOT
-var _paq = window._paq = window._paq || [];
-_paq.push(['enableLinkTracking']);
+            var _paq = window._paq = window._paq || [];
+            _paq.push(['enableLinkTracking']);
+            _paq.push(['setCustomUrl', '$pageUrl']);
 
-EOT;
+            EOT;
         if ($this->disableCookies) {
             $code .= "_paq.push(['disableCookies']);\n";
+        } elseif ($cookieConsent->isEnabled()) {
+            $code .= "_paq.push(['requireCookieConsent']);\n";
         }
 
         return $code;
@@ -458,21 +472,22 @@ EOT;
     protected function getClosingTrackingCode(): string
     {
         $escape = $this->getView()->plugin('escapejs');
-        $url = $escape($this->url);
         $trackerUrl = $escape($this->getTrackerUrl());
-        $pageUrl = $escape($this->getPageUrl());
+        $url = $escape($this->getTrackerJsUrl());
         return <<<EOT
-(function() {
-  var u='$url';
-  _paq.push(['setTrackerUrl', '$trackerUrl']);
-  _paq.push(['setSiteId', '{$this->siteId}']);
-  _paq.push(['setCustomUrl', '$pageUrl']);
-  var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-  g.type='text/javascript'; g.async=true; g.src=u+'matomo.js';
-  s.parentNode.insertBefore(g,s);
-})();
+            (function() {
+              var d=document;
+              if (!d.getElementById('_matomo_js_script')) {
+                _paq.push(['setTrackerUrl', '$trackerUrl']);
+                _paq.push(['setSiteId', {$this->siteId}]);
+                var g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+                g.async=true; g.src='$url';
+                g.id = '_matomo_js_script';
+                s.parentNode.insertBefore(g,s);
+              }
+            })();
 
-EOT;
+            EOT;
     }
 
     /**
@@ -483,16 +498,15 @@ EOT;
     protected function getPageUrl(): string
     {
         $path = $this->request->getUri()->toString();
+        // Replace 'AjaxTab' with tab name in record page URLs:
         $routeMatch = $this->router->match($this->request);
-        if ($routeMatch
-            && $routeMatch->getMatchedRouteName() == 'vufindrecord-ajaxtab'
+        if (
+            $routeMatch
+            && substr($routeMatch->getMatchedRouteName(), -8) === '-ajaxtab'
+            && null !== ($pos = strrpos($path, '/AjaxTab'))
+            && ($tab = $this->request->getPost('tab'))
         ) {
-            // Replace 'AjaxTab' with tab name in record page URLs
-            $replace = 'AjaxTab';
-            $tab = $this->request->getPost('tab');
-            if (null !== ($pos = strrpos($path, $replace))) {
-                $path = substr_replace($path, $tab, $pos, $pos + strlen($replace));
-            }
+            $path = substr_replace($path, $tab, $pos + 1, 7);
         }
         return $path;
     }
@@ -512,15 +526,23 @@ EOT;
         }
 
         $escape = $this->getView()->plugin('escapejs');
-        $code = '';
+        $code = <<<EOT
+            _paq.push(['deleteCustomVariables','page']);
+
+            EOT;
         $i = 0;
         foreach ($customData as $key => $value) {
             ++$i;
+            // We're committed to tracking a maximum of 10 custom variables at a
+            // time:
+            if ($i > 10) {
+                break;
+            }
             $value = $escape($value);
             $code .= <<<EOT
-_paq.push(['setCustomVariable','$i','$key','$value']);
+                _paq.push(['setCustomVariable',$i,'$key','$value','page']);
 
-EOT;
+                EOT;
         }
         return $code;
     }
@@ -622,45 +644,45 @@ EOT;
         $titleJs = 'var title = null;';
         $dimensions = $this->getCustomDimensionsCode($customData);
         switch ($this->context) {
-        case 'accordion':
-            $translate = $this->getView()->plugin('translate');
-            $escape = $this->getView()->plugin('escapejs');
-            $title = $translate('ajaxview_label_information');
-            if ($driver = $this->getRecordDriver()) {
-                $title .= ': ' . $driver->getBreadcrumb();
-            }
-            $titleJs = "var title = '" . $escape($title) . "';";
-            break;
-        case 'tabs':
-            $escape = $this->getView()->plugin('escapejs');
-            $headTitle = $this->getView()->plugin('headTitle');
-            if ($title = $headTitle->renderTitle()) {
-                $title = $escape($title);
-                $titleJs = "var title = '$title';";
-            } elseif ($driver = $this->getRecordDriver()) {
-                $title = $escape($driver->getBreadcrumb());
-                $titleJs = "var title = '$title';";
+            case 'accordion':
+                $translate = $this->getView()->plugin('translate');
+                $escape = $this->getView()->plugin('escapejs');
+                $title = $translate('ajaxview_label_information');
+                if ($driver = $this->getRecordDriver()) {
+                    $title .= ': ' . $driver->getBreadcrumb();
+                }
+                $titleJs = "var title = '" . $escape($title) . "';";
+                break;
+            case 'tabs':
+                $escape = $this->getView()->plugin('escapejs');
+                $headTitle = $this->getView()->plugin('headTitle');
+                if ($title = $headTitle->renderTitle()) {
+                    $title = $escape($title);
+                    $titleJs = "var title = '$title';";
+                } elseif ($driver = $this->getRecordDriver()) {
+                    $title = $escape($driver->getBreadcrumb());
+                    $titleJs = "var title = '$title';";
+                    $titleJs .= <<<EOT
+                        var a = document.querySelector('.record-tabs ul.nav-tabs li.active a');
+                        if (a) { title = a.innerText + (title ? ': ' + title : ''); }
+
+                        EOT;
+                }
+                break;
+            case 'lightbox':
                 $titleJs .= <<<EOT
-var a = document.querySelector('.record-tabs ul.nav-tabs li.active a');
-if (a) { title = a.innerText + (title ? ': ' + title : ''); }
+                    var h = document.getElementsByClassName('lightbox-header');
+                    if (h[0]) title = h[0].innerText;
 
-EOT;
-            }
-            break;
-        case 'lightbox':
-            $titleJs .= <<<EOT
-var h = document.getElementsByClassName('lightbox-header');
-if (h[0]) title = h[0].innerText;
-
-EOT;
-            break;
+                    EOT;
+                break;
         }
 
         return <<<EOT
-$titleJs
-_paq.push(['trackPageView', title, $dimensions]);
+            $titleJs
+            _paq.push(['trackPageView', title, $dimensions]);
 
-EOT;
+            EOT;
     }
 
     /**
@@ -671,6 +693,16 @@ EOT;
     protected function getTrackerUrl(): string
     {
         return $this->url . 'matomo.php';
+    }
+
+    /**
+     * Get Matomo tracker JS URL
+     *
+     * @return string
+     */
+    protected function getTrackerJsUrl(): string
+    {
+        return $this->url . 'matomo.js';
     }
 
     /**

@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Translator factory.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2019.
  *
@@ -25,14 +26,15 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Site
  */
+
 namespace VuFind\I18n\Translator;
 
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
 use Laminas\I18n\Translator\TranslatorInterface;
 use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
 use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\DelegatorFactoryInterface;
+use Psr\Container\ContainerExceptionInterface as ContainerException;
+use Psr\Container\ContainerInterface;
 use VuFind\I18n\Locale\LocaleSettings;
 
 /**
@@ -107,7 +109,7 @@ class TranslatorFactory implements DelegatorFactoryInterface
             // note of it:
             $logger = $container->get(\VuFind\Log\Logger::class);
             $logger->debug(
-                'Problem loading cache: ' . get_class($e) . ' exception: '
+                'Problem loading cache: ' . $e::class . ' exception: '
                 . $e->getMessage()
             );
         }

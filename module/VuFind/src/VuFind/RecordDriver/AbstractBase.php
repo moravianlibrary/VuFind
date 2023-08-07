@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Abstract base record model.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Page
  */
+
 namespace VuFind\RecordDriver;
 
 use VuFind\XSLT\Import\VuFind as ArticleStripper;
@@ -40,19 +42,14 @@ use VuFind\XSLT\Import\VuFind as ArticleStripper;
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Page
  */
-abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
+abstract class AbstractBase implements
+    \VuFind\Db\Table\DbTableAwareInterface,
     \VuFind\I18n\Translator\TranslatorAwareInterface,
     \VuFindSearch\Response\RecordInterface
 {
     use \VuFind\Db\Table\DbTableAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
-
-    /**
-     * Used for identifying search backends
-     *
-     * @var string
-     */
-    protected $sourceIdentifier = 'Solr';
+    use \VuFindSearch\Response\RecordTrait;
 
     /**
      * For storing extra data with record
@@ -83,6 +80,13 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
     protected $fields = [];
 
     /**
+     * Cache for rating data
+     *
+     * @var array
+     */
+    protected $ratingCache = [];
+
+    /**
      * Constructor
      *
      * @param \Laminas\Config\Config $mainConfig   VuFind main configuration (omit
@@ -101,7 +105,7 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
      *
      * @param mixed $data Raw data representing the record; Record Model
      * objects are normally constructed by Record Driver objects using data
-     * passed in from a Search Results object.  The exact nature of the data may
+     * passed in from a Search Results object. The exact nature of the data may
      * vary depending on the data source -- the important thing is that the
      * Record Driver + Search Results objects work together correctly.
      *
@@ -235,6 +239,76 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
     }
 
     /**
+     * Get rating information for this record.
+     *
+     * Returns an array with the following keys:
+     *
+     * rating - average rating (0-100)
+     * count  - count of ratings
+     *
+     * @param ?int $userId User ID, or null for all users
+     *
+     * @return array
+     */
+    public function getRatingData(?int $userId = null)
+    {
+        // Cache data since comments list may ask for same information repeatedly:
+        $cacheKey = $userId ?? '-';
+        if (!isset($this->ratingCache[$cacheKey])) {
+            $table = $this->getDbTable('Ratings');
+            $this->ratingCache[$cacheKey] = $table->getForResource(
+                $this->getUniqueId(),
+                $this->getSourceIdentifier(),
+                $userId
+            );
+        }
+        return $this->ratingCache[$cacheKey];
+    }
+
+    /**
+     * Get rating breakdown for this record.
+     *
+     * Returns an array with the following keys:
+     *
+     * rating - average rating (0-100)
+     * count  - count of ratings
+     * groups - grouped counts
+     *
+     * @param array $groups Group definition (key => [min, max])
+     *
+     * @return array
+     */
+    public function getRatingBreakdown(array $groups)
+    {
+        return $this->getDbTable('Ratings')->getCountsForResource(
+            $this->getUniqueId(),
+            $this->getSourceIdentifier(),
+            $groups
+        );
+    }
+
+    /**
+     * Add or update user's rating for the record.
+     *
+     * @param int  $userId ID of the user posting the rating
+     * @param ?int $rating The user-provided rating, or null to clear any existing
+     * rating
+     *
+     * @return void
+     */
+    public function addOrUpdateRating(int $userId, ?int $rating): void
+    {
+        // Clear rating cache:
+        $this->ratingCache = [];
+        $resources = $this->getDbTable('Resource');
+        $resource = $resources->findResource(
+            $this->getUniqueId(),
+            $this->getSourceIdentifier()
+        );
+        $resource->addOrUpdateRating($userId, $rating);
+    }
+
+    /**
      * Get notes associated with this record in user lists.
      *
      * @param int $list_id ID of list to load tags from (null for all lists)
@@ -278,28 +352,6 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
     }
 
     /**
-     * Set the source backend identifier.
-     *
-     * @param string $identifier Backend identifier
-     *
-     * @return void
-     */
-    public function setSourceIdentifier($identifier)
-    {
-        $this->sourceIdentifier = $identifier;
-    }
-
-    /**
-     * Return the source backend identifier.
-     *
-     * @return string
-     */
-    public function getSourceIdentifier()
-    {
-        return $this->sourceIdentifier;
-    }
-
-    /**
      * Returns true if the record supports real-time AJAX status lookups.
      *
      * @return bool
@@ -327,6 +379,16 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
     public function supportsCoinsOpenUrl()
     {
         return true;
+    }
+
+    /**
+     * Check if rating the record is allowed.
+     *
+     * @return bool
+     */
+    public function isRatingAllowed(): bool
+    {
+        return !empty($this->recordConfig->Social->rating);
     }
 
     /**
@@ -368,7 +430,7 @@ abstract class AbstractBase implements \VuFind\Db\Table\DbTableAwareInterface,
 
     /**
      * Get an array of strings representing citation formats supported
-     * by this record's data (empty if none).  For possible legal values,
+     * by this record's data (empty if none). For possible legal values,
      * see /application/themes/root/helpers/Citation.php.
      *
      * @return array Strings representing citation formats.

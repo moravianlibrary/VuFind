@@ -1,8 +1,9 @@
 <?php
+
 /**
  * MultiAuth Authentication plugin
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:authentication_handlers Wiki
  */
+
 namespace VuFind\Auth;
 
 use VuFind\Exception\Auth as AuthException;
@@ -32,13 +34,13 @@ use VuFind\Exception\Auth as AuthException;
 /**
  * MultiAuth Authentication plugin
  *
- * This module enables chaining of multiple authentication plugins.  Authentication
+ * This module enables chaining of multiple authentication plugins. Authentication
  * plugins are executed in order, and the first successful authentication is
- * returned with the rest ignored.  The last error message is used to be returned
+ * returned with the rest ignored. The last error message is used to be returned
  * to the calling function.
  *
  * The plugin works by being defined as the authentication handler for the system
- * and then defining its own order for plugins.  For example, you could edit
+ * and then defining its own order for plugins. For example, you could edit
  * config.ini like this:
  *
  * [Authentication]
@@ -100,7 +102,7 @@ class MultiAuth extends AbstractBase
     protected $manager;
 
     /**
-     * Validate configuration parameters.  This is a support method for getConfig(),
+     * Validate configuration parameters. This is a support method for getConfig(),
      * so the configuration MUST be accessed using $this->config; do not call
      * $this->getConfig() from within this method!
      *
@@ -134,7 +136,8 @@ class MultiAuth extends AbstractBase
                 explode(',', $config->MultiAuth->method_order)
             );
         }
-        if (isset($config->MultiAuth->filters)
+        if (
+            isset($config->MultiAuth->filters)
             && strlen($config->MultiAuth->filters)
         ) {
             $this->filters = array_map(
@@ -145,7 +148,7 @@ class MultiAuth extends AbstractBase
     }
 
     /**
-     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * Attempt to authenticate the current user. Throws exception if login fails.
      *
      * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
      * account credentials.

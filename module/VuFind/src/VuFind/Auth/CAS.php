@@ -1,8 +1,9 @@
 <?php
+
 /**
  * CAS authentication module.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -26,6 +27,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Page
  */
+
 namespace VuFind\Auth;
 
 use VuFind\Exception\Auth as AuthException;
@@ -51,7 +53,7 @@ class CAS extends AbstractBase
     protected $phpCASSetup = false;
 
     /**
-     * Validate configuration parameters.  This is a support method for getConfig(),
+     * Validate configuration parameters. This is a support method for getConfig(),
      * so the configuration MUST be accessed using $this->config; do not call
      * $this->getConfig() from within this method!
      *
@@ -105,7 +107,7 @@ class CAS extends AbstractBase
     }
 
     /**
-     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * Attempt to authenticate the current user. Throws exception if login fails.
      *
      * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
      * account credentials.
@@ -136,7 +138,7 @@ class CAS extends AbstractBase
         // Has the user configured attributes to use for populating the user table?
         $attribsToCheck = [
             "cat_username", "cat_password", "email", "lastname", "firstname",
-            "college", "major", "home_library"
+            "college", "major", "home_library",
         ];
         $catPassword = null;
         foreach ($attribsToCheck as $attribute) {
@@ -174,7 +176,7 @@ class CAS extends AbstractBase
 
     /**
      * Get the URL to establish a session (needed when the internal VuFind login
-     * form is inadequate).  Returns false when no session initiator is needed.
+     * form is inadequate). Returns false when no session initiator is needed.
      *
      * @param string $target Full URL where external authentication method should
      * send user after login (some drivers may override this).
@@ -189,7 +191,7 @@ class CAS extends AbstractBase
         } else {
             $casTarget = $target;
         }
-        $append = (strpos($casTarget, '?') !== false) ? '&' : '?';
+        $append = (str_contains($casTarget, '?')) ? '&' : '?';
         $sessionInitiator = $config->CAS->login
             . '?service=' . urlencode($casTarget)
             . urlencode($append . 'auth_method=CAS');
@@ -205,7 +207,8 @@ class CAS extends AbstractBase
     public function isExpired()
     {
         $config = $this->getConfig();
-        if (isset($config->CAS->username)
+        if (
+            isset($config->CAS->username)
             && isset($config->CAS->logout)
         ) {
             $casauth = $this->setupCAS();
@@ -228,7 +231,8 @@ class CAS extends AbstractBase
     {
         // If single log-out is enabled, use a special URL:
         $config = $this->getConfig();
-        if (isset($config->CAS->logout)
+        if (
+            isset($config->CAS->logout)
             && !empty($config->CAS->logout)
         ) {
             $url = $config->CAS->logout . '?service=' . urlencode($url);
@@ -280,7 +284,8 @@ class CAS extends AbstractBase
         // client can only be called once.
         if (!$this->phpCASSetup) {
             $cas = $this->getConfig()->CAS;
-            if (isset($cas->log)
+            if (
+                isset($cas->log)
                 && !empty($cas->log) && isset($cas->debug) && ($cas->debug)
             ) {
                 $casauth->setDebug($cas->log);

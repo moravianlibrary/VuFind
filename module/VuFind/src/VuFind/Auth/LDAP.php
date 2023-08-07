@@ -1,8 +1,9 @@
 <?php
+
 /**
  * LDAP authentication class
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -26,6 +27,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:authentication_handlers Wiki
  */
+
 namespace VuFind\Auth;
 
 use VuFind\Exception\Auth as AuthException;
@@ -43,7 +45,7 @@ use VuFind\Exception\Auth as AuthException;
 class LDAP extends AbstractBase
 {
     /**
-     * Validate configuration parameters.  This is a support method for getConfig(),
+     * Validate configuration parameters. This is a support method for getConfig(),
      * so the configuration MUST be accessed using $this->config; do not call
      * $this->getConfig() from within this method!
      *
@@ -55,7 +57,8 @@ class LDAP extends AbstractBase
         // Check for missing parameters:
         $requiredParams = ['host', 'port', 'basedn', 'username'];
         foreach ($requiredParams as $param) {
-            if (!isset($this->config->LDAP->$param)
+            if (
+                !isset($this->config->LDAP->$param)
                 || empty($this->config->LDAP->$param)
             ) {
                 throw new AuthException(
@@ -84,7 +87,7 @@ class LDAP extends AbstractBase
     }
 
     /**
-     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * Attempt to authenticate the current user. Throws exception if login fails.
      *
      * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
      * account credentials.
@@ -184,7 +187,7 @@ class LDAP extends AbstractBase
     protected function bindForSearch($connection)
     {
         // If bind_username and bind_password were supplied in the config file, use
-        // them to access LDAP before proceeding.  In some LDAP setups, these
+        // them to access LDAP before proceeding. In some LDAP setups, these
         // settings can be excluded in order to skip this step.
         $user = $this->getSetting('bind_username');
         $pass = $this->getSetting('bind_password');
@@ -263,7 +266,7 @@ class LDAP extends AbstractBase
         // Database fields that we may be able to load from LDAP:
         $fields = [
             'firstname', 'lastname', 'email', 'cat_username', 'cat_password',
-            'college', 'major'
+            'college', 'major',
         ];
 
         // User object to populate from LDAP:

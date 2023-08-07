@@ -1,8 +1,9 @@
 <?php
+
 /**
  * EBSCO Search API abstract base class
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) EBSCO Industries 2013
  *
@@ -26,6 +27,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://edswiki.ebscohost.com/EDS_API_Documentation
  */
+
 namespace VuFindSearch\Backend\EDS;
 
 /**
@@ -47,11 +49,11 @@ abstract class Base
     protected $debug = false;
 
     /**
-     * EDSAPI host
+     * EDS or EPF API host.
      *
      * @var string
      */
-    protected $edsApiHost = 'https://eds-api.ebscohost.com/edsapi/rest';
+    protected $apiHost;
 
     /**
      * Auth host
@@ -61,9 +63,16 @@ abstract class Base
     protected $authHost = 'https://eds-api.ebscohost.com/authservice/rest';
 
     /**
-     * The organization id use for authentication
+     * Session host.
      *
      * @var string
+     */
+    protected $sessionHost = 'https://eds-api.ebscohost.com/edsapi/rest';
+
+    /**
+     * The organization id use for authentication
+     *
+     * @var ?string
      */
     protected $orgId;
 
@@ -106,20 +115,23 @@ abstract class Base
         if (is_array($settings)) {
             foreach ($settings as $key => $value) {
                 switch ($key) {
-                case 'api_url':
-                    $this->edsApiHost = $value;
-                    break;
-                case 'auth_url':
-                    $this->authHost = $value;
-                    break;
-                case 'debug':
-                    $this->debug = $value;
-                    break;
-                case 'orgid':
-                    $this->orgId = $value;
-                    break;
-                case 'search_http_method':
-                    $this->searchHttpMethod = $value;
+                    case 'api_url':
+                        $this->apiHost = $value;
+                        break;
+                    case 'auth_url':
+                        $this->authHost = $value;
+                        break;
+                    case 'session_url':
+                        $this->sessionHost = $value;
+                        break;
+                    case 'debug':
+                        $this->debug = $value;
+                        break;
+                    case 'orgid':
+                        $this->orgId = $value;
+                        break;
+                    case 'search_http_method':
+                        $this->searchHttpMethod = $value;
                 }
             }
         }
@@ -150,7 +162,7 @@ abstract class Base
     public function info($authenticationToken = null, $sessionToken = null)
     {
         $this->debugPrint("Info");
-        $url = $this->edsApiHost . '/info';
+        $url = $this->apiHost . '/info';
         $headers = $this->setTokens($authenticationToken, $sessionToken);
         return $this->call($url, $headers);
     }
@@ -159,7 +171,7 @@ abstract class Base
      * Creates a new session
      *
      * @param string $profile   Profile to use
-     * @param string $isGuest   Whether or not this sesssion will be a guest session
+     * @param string $isGuest   Whether or not this session will be a guest session
      * @param string $authToken Authentication token
      *
      * @return array
@@ -174,13 +186,48 @@ abstract class Base
             . "$profile, guest: $isGuest, authToken: $authToken "
         );
         $qs = ['profile' => $profile, 'guest' => $isGuest];
-        $url = $this->edsApiHost . '/createsession';
+        $url = $this->sessionHost . '/createsession';
         $headers = $this->setTokens($authToken, null);
-        return $this->call($url, $headers, $qs);
+        return $this->call($url, $headers, $qs, 'GET', null, '', false);
     }
 
     /**
-     * Retrieves a record specified by its identifiers
+     * Retrieves an EDS record specified by its identifiers
+     *
+     * @param string $an                  An of the record to retrieve from the
+     * EdsApi
+     * @param string $dbId                Database identifier of the record to
+     * retrieve from the EdsApi
+     * @param string $authenticationToken Authentication token
+     * @param string $sessionToken        Session token
+     * @param string $highlightTerms      Comma separated list of terms to highlight
+     * in the retrieved record responses
+     * @param array  $extraQueryParams    Extra query string parameters
+     *
+     * @return array    The requested record
+     *
+     * @deprecated Use retrieveEdsItem
+     */
+    public function retrieve(
+        $an,
+        $dbId,
+        $authenticationToken,
+        $sessionToken,
+        $highlightTerms = null,
+        $extraQueryParams = []
+    ) {
+        return $this->retrieveEdsItem(
+            $an,
+            $dbId,
+            $authenticationToken,
+            $sessionToken,
+            $highlightTerms,
+            $extraQueryParams
+        );
+    }
+
+    /**
+     * Retrieves an EDS record specified by its identifiers
      *
      * @param string $an                  An of the record to retrieve from the
      * EdsApi
@@ -194,7 +241,7 @@ abstract class Base
      *
      * @return array    The requested record
      */
-    public function retrieve(
+    public function retrieveEdsItem(
         $an,
         $dbId,
         $authenticationToken,
@@ -209,7 +256,31 @@ abstract class Base
         if (null != $highlightTerms) {
             $qs['highlightterms'] = $highlightTerms;
         }
-        $url = $this->edsApiHost . '/retrieve';
+        $url = $this->apiHost . '/retrieve';
+        $headers = $this->setTokens($authenticationToken, $sessionToken);
+        return $this->call($url, $headers, $qs);
+    }
+
+    /**
+     * Retrieves an EPF record specified by its identifiers
+     *
+     * @param string $pubId               Id of the record to retrieve from the
+     * EpfApi
+     * @param string $authenticationToken Authentication token
+     * @param string $sessionToken        Session token
+     *
+     * @return array    The requested record
+     */
+    public function retrieveEpfItem(
+        $pubId,
+        $authenticationToken,
+        $sessionToken
+    ) {
+        $this->debugPrint(
+            "Get Record. pubId: $pubId"
+        );
+        $qs = ['id' => $pubId];
+        $url = $this->apiHost . '/retrieve';
         $headers = $this->setTokens($authenticationToken, $sessionToken);
         return $this->call($url, $headers, $qs);
     }
@@ -232,7 +303,7 @@ abstract class Base
         $this->debugPrint(
             'Query: ' . ($method === 'GET' ? print_r($qs, true) : $json)
         );
-        $url = $this->edsApiHost . '/search';
+        $url = $this->apiHost . '/search';
         $headers = $this->setTokens($authenticationToken, $sessionToken);
         return $this->call($url, $headers, $qs, $method, $json);
     }
@@ -269,11 +340,19 @@ abstract class Base
      */
     public function autocomplete($query, $type, $data, $raw = false)
     {
-        // build request
-        $url = $data['url'] . '?idx=' . urlencode($type) .
-            '&token=' . urlencode($data['token']) .
-            '&filters=[{"name"%3A"custid"%2C"values"%3A["' .
-            urlencode($data['custid']) . '"]}]&term=' . urlencode($query);
+        // $filters is an array of filter objects
+        // filter objects consist of name and an array of values (customer ids)
+        $filters = [['name' => 'custid', 'values' => [$data['custid']]]];
+
+        $params = [
+            'idx' => $type,
+            'token' => $data['token'],
+            'filters' => json_encode($filters),
+            'term' => $query,
+        ];
+
+        $url = $data['url'] . '?' . http_build_query($params);
+
         $this->debugPrint("Autocomplete URL: " . $url);
         $response = $this->call($url, null, null, 'GET', null);
         return $raw ? $response : $this->parseAutocomplete($response);
@@ -314,7 +393,7 @@ abstract class Base
             $authInfo['Options'] = $params;
         }
         $messageBody = json_encode($authInfo);
-        return $this->call($url, null, null, 'POST', $messageBody);
+        return $this->call($url, null, null, 'POST', $messageBody, '', false);
     }
 
     /**
@@ -347,7 +426,7 @@ abstract class Base
                             = $finalParameterName . '=' . urlencode($subValue);
                     }
                 } else {
-                    $queryParameters[] = $key . '=' . urlencode($value);
+                    $queryParameters[] = $key . '=' . urlencode($value ?? '');
                 }
             }
         }
@@ -363,6 +442,7 @@ abstract class Base
      * @param string $method        The HTTP Method to use
      * @param string $message       Message to POST if $method is POST
      * @param string $messageFormat Format of request $messageBody and responses
+     * @param bool   $cacheable     Whether the request is cacheable
      *
      * @throws ApiException
      * @return object         EDS API response (or an Error object).
@@ -373,22 +453,20 @@ abstract class Base
         $params = [],
         $method = 'GET',
         $message = null,
-        $messageFormat = ""
+        $messageFormat = "",
+        $cacheable = true
     ) {
         // Build Query String Parameters
         $queryParameters = $this->createQSFromArray($params);
-        $queryString = '';
-        if (null != $queryParameters && !empty($queryParameters)) {
-            $queryString = implode('&', $queryParameters);
-        }
+        $queryString = implode('&', $queryParameters);
         $this->debugPrint("Querystring to use: $queryString ");
         // Build headers
         $headers = [
             'Accept' => $this->accept,
             'Content-Type' => $this->contentType,
-            'Accept-Encoding' => 'gzip,deflate'
+            'Accept-Encoding' => 'gzip,deflate',
         ];
-        if (null != $headerParams && !empty($headerParams)) {
+        if (null != $headerParams) {
             foreach ($headerParams as $key => $value) {
                 $headers[$key] = $value;
             }
@@ -399,18 +477,19 @@ abstract class Base
             $queryString,
             $headers,
             $message,
-            $messageFormat
+            $messageFormat,
+            $cacheable
         );
         return $this->process($response);
     }
 
     /**
-     * Process EDSAPI response message
+     * Process EDS API response message
      *
-     * @param array $input The raw response from Summon
+     * @param string $input The raw response from EDS API
      *
      * @throws ApiException
-     * @return array       The processed response from EDS API
+     * @return array        The processed response from EDS API
      */
     protected function process($input)
     {
@@ -459,6 +538,7 @@ abstract class Base
      * @param array  $headers       HTTP headers to send
      * @param string $messageBody   Message body to for HTTP Request
      * @param string $messageFormat Format of request $messageBody and responses
+     * @param bool   $cacheable     Whether the request is cacheable
      *
      * @return string             HTTP response body
      */
@@ -468,6 +548,7 @@ abstract class Base
         $queryString,
         $headers,
         $messageBody,
-        $messageFormat
+        $messageFormat,
+        $cacheable = true
     );
 }

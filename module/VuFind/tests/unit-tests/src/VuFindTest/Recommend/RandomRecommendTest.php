@@ -3,9 +3,9 @@
 /**
  * Random Recommend tests.
  *
- * PHP version 7
+ * PHP version 8
  *
- * Copyright (C) Villanova University 2010.
+ * Copyright (C) Villanova University 2010, 2022.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -23,9 +23,11 @@
  * @category VuFind
  * @package  Tests
  * @author   Luke O'Sullivan <l.osullivan@swansea.ac.uk>
+ * @author   Sudharma Kellampalli <skellamp@villanova.edu>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:testing:unit_tests Wiki
  */
+
 namespace VuFindTest\Recommend;
 
 use VuFind\Recommend\RandomRecommend as Random;
@@ -143,7 +145,8 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
      */
     public function testCanInitialise()
     {
-        $service = $this->createMock(\VuFindSearch\Service::class);
+        $service = $this->getMockBuilder(\VuFindSearch\Service::class)
+            ->disableOriginalConstructor()->getMock();
         $paramManager = $this->createMock(\VuFind\Search\Params\PluginManager::class);
         $recommend = new Random($service, $paramManager);
 
@@ -153,12 +156,25 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
         $params->setBasicSearch($query->getString(), $query->getHandler());
         $request = $this->createMock(\Laminas\Stdlib\Parameters::class);
 
-        $service->expects($this->once())->method('random')
-            ->with(
-                $this->equalTo("Solr"),
-                $this->equalTo($params->getQuery()),
-                $this->equalTo(10)
-            )->will($this->returnValue($this->createMock(\VuFindSearch\Response\RecordCollectionInterface::class)));
+        $commandObj = $this->getMockBuilder(\VuFindSearch\Command\AbstractBase::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $commandObj->expects($this->once())->method('getResult')
+            ->will($this->returnValue($this->createMock(\VuFindSearch\Response\RecordCollectionInterface::class)));
+
+        $checkCommand = function ($command) {
+            return $command::class === \VuFindSearch\Command\RandomCommand::class
+                && $command->getTargetIdentifier() === "Solr"
+                && $command->getArguments()[0]->getAllTerms() === "john smith"
+                && $command->getArguments()[1] === 10
+                && $command->getArguments()[2]->getArrayCopy() ===
+                    ['spellcheck' => ['true'],
+                    'fq' => ['facet1:"value1"', 'facet2:"value2"'],
+                    'hl' => ["false"]];
+        };
+        $service->expects($this->once())->method('invoke')
+            ->with($this->callback($checkCommand))
+            ->will($this->returnValue($commandObj));
 
         $recommend->setConfig("Solr:10:mixed:retain:20:facet1:value1:facet2:value2");
         $recommend->init($params, $request);
@@ -171,8 +187,10 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
      */
     public function testCanInitialiseInDisregardMode()
     {
-        $service = $this->createMock(\VuFindSearch\Service::class);
-        $paramManager = $this->createMock(\VuFind\Search\Params\PluginManager::class);
+        $service = $this->getMockBuilder(\VuFindSearch\Service::class)
+            ->disableOriginalConstructor()->getMock();
+        $paramManager = $this->getMockBuilder(\VuFind\Search\Params\PluginManager::class)
+            ->disableOriginalConstructor()->getMock();
         $recommend = new Random($service, $paramManager);
 
         $params = $this->getSolrParams();
@@ -186,22 +204,41 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
         $params->setBasicSearch($query->getString(), $query->getHandler());
         $request = $this->createMock(\Laminas\Stdlib\Parameters::class);
 
-        $service->expects($this->once())->method('random')
-            ->with($this->equalTo("Solr"))
+        $commandObj = $this->getMockBuilder(\VuFindSearch\Command\AbstractBase::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $commandObj->expects($this->once())->method('getResult')
             ->will($this->returnValue($this->createMock(\VuFindSearch\Response\RecordCollectionInterface::class)));
+
+        $checkCommand = function ($command) {
+            return $command::class === \VuFindSearch\Command\RandomCommand::class
+                && $command->getTargetIdentifier() === "Solr"
+                && $command->getArguments()[0]->getAllTerms() === "john smith"
+                && $command->getArguments()[1] === 10
+                && $command->getArguments()[2]->getArrayCopy() ===
+                    ['spellcheck' => ['true'],
+                    'fq' => ['facet1:"value1"',
+                    'facet2:"value2"'], 'hl' => ["false"]];
+        };
+        $service->expects($this->once())->method('invoke')
+            ->with($this->callback($checkCommand))
+            ->will($this->returnValue($commandObj));
 
         $recommend->setConfig("Solr:10:mixed:disregard:20:facet1:value1:facet2:value2");
         $recommend->init($params, $request);
     }
 
     /**
-     * Test minimum result limit feature
+     * Get a module configured to return results.
      *
-     * @return void
+     * @param string $recConfig Recommendation module configuration
+     *
+     * @return Random
      */
-    public function testWillReturnEmptyForMinimumResultLimit()
+    protected function getConfiguredModule($recConfig): Random
     {
-        $service = $this->createMock(\VuFindSearch\Service::class);
+        $service = $this->getMockBuilder(\VuFindSearch\Service::class)
+            ->disableOriginalConstructor()->getMock();
         $paramManager = $this->createMock(\VuFind\Search\Params\PluginManager::class);
         $recommend = new Random($service, $paramManager);
         $records = ["1", "2", "3", "4", "5"];
@@ -213,20 +250,45 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
         $params->setBasicSearch($query->getString(), $query->getHandler());
         $request = $this->createMock(\Laminas\Stdlib\Parameters::class);
 
-        $results = $this->createMock(\VuFindSearch\Response\RecordCollectionInterface::class);
+        $results = $this->getMockBuilder(\VuFindSearch\Response\RecordCollectionInterface::class)
+            ->getMock();
         $results->expects($this->once())->method('getRecords')
             ->will($this->returnValue($records));
 
-        $service->expects($this->once())->method('random')
-            ->with(
-                $this->equalTo("Solr"),
-                $this->equalTo($params->getQuery()),
-                $this->equalTo(10)
-            )->will($this->returnValue($results));
+        $commandObj = $this->getMockBuilder(\VuFindSearch\Command\AbstractBase::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $commandObj->expects($this->once())->method('getResult')
+            ->will($this->returnValue($results));
 
-        $recommend->setConfig("Solr:10:mixed:retain:20:facet1:value1:facet2:value2");
+        $checkCommand = function ($command) {
+            return $command::class === \VuFindSearch\Command\RandomCommand::class
+                && $command->getTargetIdentifier() === "Solr"
+                && $command->getArguments()[0]->getAllTerms() === "john smith"
+                && $command->getArguments()[1] === 10
+                && $command->getArguments()[2]->getArrayCopy() ===
+                    ['spellcheck' => ['true'],
+                    'fq' => ['facet1:"value1"',
+                    'facet2:"value2"'], 'hl' => ["false"]];
+        };
+        $service->expects($this->once())->method('invoke')
+            ->with($this->callback($checkCommand))
+            ->will($this->returnValue($commandObj));
+
+        $recommend->setConfig($recConfig);
         $recommend->init($params, $request);
         $recommend->process($results);
+        return $recommend;
+    }
+
+    /**
+     * Test minimum result limit feature
+     *
+     * @return void
+     */
+    public function testWillReturnEmptyForMinimumResultLimit()
+    {
+        $recommend = $this->getConfiguredModule("Solr:10:mixed:retain:20:facet1:value1:facet2:value2");
         $output = $recommend->getResults();
         $this->assertEmpty($output);
     }
@@ -238,34 +300,9 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
      */
     public function testWillReturnResults()
     {
-        $service = $this->createMock(\VuFindSearch\Service::class);
-        $paramManager = $this->createMock(\VuFind\Search\Params\PluginManager::class);
-        $recommend = new Random($service, $paramManager);
-        $records = ["1", "2", "3", "4", "5"];
-
-        // Use Solr since some Base components are abstract:
-        $results = $this->getSolrResults();
-        $params = $results->getParams();
-        $query = $this->unserializeFixture('query');
-        $params->setBasicSearch($query->getString(), $query->getHandler());
-        $request = $this->createMock(\Laminas\Stdlib\Parameters::class);
-
-        $results = $this->createMock(\VuFindSearch\Response\RecordCollectionInterface::class);
-        $results->expects($this->once())->method('getRecords')
-            ->will($this->returnValue($records));
-
-        $service->expects($this->once())->method('random')
-            ->with(
-                $this->equalTo("Solr"),
-                $this->equalTo($params->getQuery()),
-                $this->equalTo(10)
-            )->will($this->returnValue($results));
-
-        $recommend->setConfig("Solr:10:mixed:retain:0:facet1:value1:facet2:value2");
-        $recommend->init($params, $request);
-        $recommend->process($results);
+        $recommend = $this->getConfiguredModule("Solr:10:mixed:retain:0:facet1:value1:facet2:value2");
         $output = $recommend->getResults();
-        $this->assertEquals($records, $output);
+        $this->assertEquals(["1", "2", "3", "4", "5"], $output);
     }
 
     /**
@@ -281,6 +318,8 @@ class RandomRecommendTest extends \PHPUnit\Framework\TestCase
 
     /**
      * Get a fixture object
+     *
+     * @param string $file Fixture name
      *
      * @return mixed
      */

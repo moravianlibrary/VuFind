@@ -3,7 +3,7 @@
 /**
  * Class MarkdownFactory
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Moravian Library 2020.
  *
@@ -26,10 +26,11 @@
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://knihovny.cz Main Page
  */
+
 namespace VuFind\View\Helper\Root;
 
-use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerInterface;
 
 /**
  * Markdown helper factory
@@ -59,7 +60,7 @@ class MarkdownFactory implements FactoryInterface
         array $options = null
     ) {
         $markdownService = $container
-            ->get(\League\CommonMark\MarkdownConverterInterface::class);
+            ->get(\League\CommonMark\ConverterInterface::class);
         return new $requestedName($markdownService);
     }
 }

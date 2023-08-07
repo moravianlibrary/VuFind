@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Abstract base for cover loader plug-ins.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development Wiki
  */
+
 namespace VuFind\Content;
 
 /**
@@ -88,6 +90,14 @@ abstract class AbstractCover
     protected $supportsRecordid = false;
 
     /**
+     * Does this plugin support getting cover by UUID (Universally unique
+     * identifier)?
+     *
+     * @var bool
+     */
+    protected $supportsUuid = false;
+
+    /**
      * Are we allowed to cache images from this source?
      *
      * @var bool
@@ -145,7 +155,8 @@ abstract class AbstractCover
             || ($this->supportsOclc && isset($ids['oclc']))
             || ($this->supportsUpc && isset($ids['upc']))
             || ($this->supportsNbn && isset($ids['nbn']))
-            || ($this->supportsRecordid && isset($ids['recordid']));
+            || ($this->supportsRecordid && isset($ids['recordid']))
+            || ($this->supportsUuid && isset($ids['uuid']));
     }
 
     /**

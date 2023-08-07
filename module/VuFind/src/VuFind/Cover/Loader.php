@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Book Cover Generator
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2007.
  *
@@ -26,6 +27,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/configuration:external_content Wiki
  */
+
 namespace VuFind\Cover;
 
 use VuFind\Content\Covers\PluginManager as ApiManager;
@@ -95,11 +97,11 @@ class Loader extends \VuFind\ImageLoader
     protected $baseDir;
 
     /**
-     * User ISBN parameter
+     * User ISBNs parameter
      *
-     * @var ISBN
+     * @var ISBN[]
      */
-    protected $isbn = null;
+    protected $isbns = null;
 
     /**
      * User ISSN parameter
@@ -135,6 +137,13 @@ class Loader extends \VuFind\ImageLoader
      * @var ISMN
      */
     protected $ismn = null;
+
+    /**
+     * User UUID parameter
+     *
+     * @var string
+     */
+    protected $uuid = null;
 
     /**
      * User record id number parameter
@@ -207,7 +216,8 @@ class Loader extends \VuFind\ImageLoader
     {
         $settings = isset($this->config->DynamicCovers)
             ? $this->config->DynamicCovers->toArray() : [];
-        if (!isset($settings['backgroundMode'])
+        if (
+            !isset($settings['backgroundMode'])
             && isset($this->config->Content->makeDynamicCovers)
         ) {
             $settings['backgroundMode'] = $this->config->Content->makeDynamicCovers;
@@ -245,7 +255,7 @@ class Loader extends \VuFind\ImageLoader
     protected function getDefaultSettings()
     {
         return [
-            'isbn' => null,
+            'isbns' => null,
             'size' => 'small',
             'type' => null,
             'title' => null,
@@ -258,6 +268,7 @@ class Loader extends \VuFind\ImageLoader
             'source' => null,
             'nbn' => null,
             'ismn' => null,
+            'uuid' => null,
         ];
     }
 
@@ -293,8 +304,14 @@ class Loader extends \VuFind\ImageLoader
     protected function storeSanitizedSettings($settings)
     {
         $settings = array_merge($this->getDefaultSettings(), $settings);
-        $this->isbn = new ISBN($settings['isbn']);
-        $this->ismn = new ISMN($settings['ismn']);
+        $this->isbns = array_map(
+            function ($isbn) {
+                return new ISBN($isbn);
+            },
+            $settings['isbns']
+                ?? (empty($settings['isbn']) ? [] : [$settings['isbn']])
+        );
+        $this->ismn = new ISMN($settings['ismn'] ?? '');
         if (!empty($settings['issn'])) {
             $rawissn = preg_replace('/[^0-9X]/', '', strtoupper($settings['issn']));
             $this->issn = substr($rawissn, 0, 8);
@@ -306,7 +323,8 @@ class Loader extends \VuFind\ImageLoader
         $this->recordid = $settings['recordid'];
         $this->source = $settings['source'];
         $this->nbn = $settings['nbn'];
-        $this->type = preg_replace('/[^a-zA-Z]/', '', $settings['type']);
+        $this->uuid = $settings['uuid'];
+        $this->type = preg_replace('/[^a-zA-Z]/', '', $settings['type'] ?? '');
         $this->size = $settings['size'];
     }
 
@@ -314,11 +332,12 @@ class Loader extends \VuFind\ImageLoader
      * Load an image given an ISBN and/or content type.
      *
      * @param array $settings Array of settings used to calculate a cover; may
-     * contain any or all of these keys: 'isbn' (ISBN), 'size' (requested size),
-     * 'type' (content type), 'title' (title of book, for dynamic covers), 'author'
-     * (author of book, for dynamic covers), 'callnumber' (unique ID, for dynamic
-     * covers), 'issn' (ISSN), 'oclc' (OCLC number), 'upc' (UPC number),
-     * 'nbn' (national bibliography number), 'ismn' (ISMN).
+     * contain any or all of these keys: 'isbns' (array of ISBNs), 'size' (requested
+     * size), 'type' (content type), 'title' (title of book, for dynamic covers),
+     * 'author' (author of book, for dynamic covers), 'callnumber' (unique ID, for
+     * dynamic covers), 'issn' (ISSN), 'oclc' (OCLC number), 'upc' (UPC number),
+     * 'nbn' (national bibliography number), 'ismn' (ISMN), 'uuid' (Universally
+     * unique identifier).
      *
      * @return void
      */
@@ -339,7 +358,8 @@ class Loader extends \VuFind\ImageLoader
         // are able to display an ISBN or content-type-based image.
         if (!in_array($this->size, $this->validSizes)) {
             $this->loadUnavailable();
-        } elseif (!$this->fetchFromAPI()
+        } elseif (
+            !$this->fetchFromAPI()
             && !$this->fetchFromContentType()
         ) {
             if ($this->generator) {
@@ -406,6 +426,8 @@ class Loader extends \VuFind\ImageLoader
             return $this->getCachePath($this->size, 'NBN' . $ids['nbn']);
         } elseif (isset($ids['ismn'])) {
             return $this->getCachePath($this->size, 'ISMN' . $ids['ismn']->get13());
+        } elseif (isset($ids['uuid'])) {
+            return $this->getCachePath($this->size, 'UUID' . $ids['uuid']);
         } elseif (isset($ids['recordid']) && isset($ids['source'])) {
             return $this->getCachePath(
                 $this->size,
@@ -423,8 +445,9 @@ class Loader extends \VuFind\ImageLoader
     protected function getIdentifiers()
     {
         $ids = [];
-        if ($this->isbn && $this->isbn->isValid()) {
-            $ids['isbn'] = $this->isbn;
+        if (!empty($this->isbns)) {
+            $ids['isbn'] = $this->isbns[0];
+            $ids['isbns'] = $this->isbns;
         }
         if ($this->issn && strlen($this->issn) == 8) {
             $ids['issn'] = $this->issn;
@@ -440,6 +463,9 @@ class Loader extends \VuFind\ImageLoader
         }
         if ($this->ismn && $this->ismn->isValid()) {
             $ids['ismn'] = $this->ismn;
+        }
+        if ($this->uuid && strlen($this->uuid) > 0) {
+            $ids['uuid'] = $this->uuid;
         }
         if ($this->recordid && strlen($this->recordid) > 0) {
             $ids['recordid'] = $this->recordid;
@@ -619,7 +645,8 @@ class Loader extends \VuFind\ImageLoader
                 ? trim(strtolower($this->config->Content->coverimagesCache)) : true;
             if ($conf === true || $conf === 1 || $conf === '1' || $conf === 'true') {
                 $cache = true;
-            } elseif ($conf === false || $conf === 0 || $conf === '0'
+            } elseif (
+                $conf === false || $conf === 0 || $conf === '0'
                 || $conf === 'false'
             ) {
                 $cache = false;
@@ -666,7 +693,7 @@ class Loader extends \VuFind\ImageLoader
             }
 
             // Figure out file paths -- $tempFile will be used to store the
-            // image for analysis.  $finalFile will be used for long-term storage if
+            // image for analysis. $finalFile will be used for long-term storage if
             // $cache is true or for temporary display purposes if $cache is false.
             $tempFile = str_replace('.jpg', uniqid(), $this->localFile);
             $finalFile = $cache ? $this->localFile : $tempFile . '.jpg';
@@ -718,7 +745,7 @@ class Loader extends \VuFind\ImageLoader
                 }
             } catch (\Exception $e) {
                 $this->debug(
-                    get_class($e) . ' during processing of ' . $handler['apiName']
+                    $e::class . ' during processing of ' . $handler['apiName']
                     . ': ' . $e->getMessage()
                 );
             }

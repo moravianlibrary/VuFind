@@ -1,8 +1,9 @@
 <?php
+
 /**
  * VuFind Action Helper - New Items Support Methods
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Page
  */
+
 namespace VuFind\Controller\Plugin;
 
 use Laminas\Config\Config;
@@ -73,7 +75,7 @@ class NewItems extends AbstractPlugin
     public function getBibIDsFromCatalog($catalog, $params, $range, $dept, $flash)
     {
         // The code always pulls in enough catalog results to get a fixed number
-        // of pages worth of Solr results.  Note that if the Solr index is out of
+        // of pages worth of Solr results. Note that if the Solr index is out of
         // sync with the ILS, we may see fewer results than expected.
         $resultPages = $this->getResultPages();
         $perPage = $params->getLimit();

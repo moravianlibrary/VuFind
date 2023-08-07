@@ -1,8 +1,9 @@
 <?php
+
 /**
  * MultiAuth Authentication plugin
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:authentication_handlers Wiki
  */
+
 namespace VuFind\Auth;
 
 use Laminas\Http\PhpEnvironment\Request;
@@ -89,7 +91,7 @@ class ChoiceAuth extends AbstractBase
     }
 
     /**
-     * Validate configuration parameters.  This is a support method for getConfig(),
+     * Validate configuration parameters. This is a support method for getConfig(),
      * so the configuration MUST be accessed using $this->config; do not call
      * $this->getConfig() from within this method!
      *
@@ -98,7 +100,8 @@ class ChoiceAuth extends AbstractBase
      */
     protected function validateConfig()
     {
-        if (!isset($this->config->ChoiceAuth->choice_order)
+        if (
+            !isset($this->config->ChoiceAuth->choice_order)
             || !strlen($this->config->ChoiceAuth->choice_order)
         ) {
             throw new AuthException(
@@ -152,7 +155,7 @@ class ChoiceAuth extends AbstractBase
     }
 
     /**
-     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * Attempt to authenticate the current user. Throws exception if login fails.
      *
      * @param Request $request Request object containing account credentials.
      *
@@ -264,7 +267,7 @@ class ChoiceAuth extends AbstractBase
 
     /**
      * Get the URL to establish a session (needed when the internal VuFind login
-     * form is inadequate).  Returns false when no session initiator is needed.
+     * form is inadequate). Returns false when no session initiator is needed.
      *
      * @param string $target Full URL where external authentication strategy should
      * send user after login (some drivers may override this).
@@ -294,6 +297,16 @@ class ChoiceAuth extends AbstractBase
     public function supportsPasswordRecovery()
     {
         return $this->proxyAuthMethod('supportsPasswordRecovery', func_get_args());
+    }
+
+    /**
+     * Username policy for a new account (e.g. minLength, maxLength)
+     *
+     * @return array
+     */
+    public function getUsernamePolicy()
+    {
+        return $this->proxyAuthMethod('getUsernamePolicy', func_get_args());
     }
 
     /**
@@ -413,11 +426,11 @@ class ChoiceAuth extends AbstractBase
     {
         // Set new strategy; fall back to old one if there is a problem:
         $defaultStrategy = $this->strategy;
-        $this->strategy = trim($request->getPost()->get('auth_method'));
-        if (empty($this->strategy)) {
-            $this->strategy = trim($request->getQuery()->get('auth_method'));
+        $this->strategy = trim($request->getPost()->get('auth_method', ''));
+        if (!$this->strategy) {
+            $this->strategy = trim($request->getQuery()->get('auth_method', ''));
         }
-        if (empty($this->strategy)) {
+        if (!$this->strategy) {
             $this->strategy = $defaultStrategy;
             if (empty($this->strategy)) {
                 throw new AuthException('authentication_error_technical');

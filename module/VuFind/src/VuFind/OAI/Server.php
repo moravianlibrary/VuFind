@@ -1,8 +1,9 @@
 <?php
+
 /**
  * OAI Server class
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  * Copyright (C) The National Library of Finland 2018-2019.
@@ -27,6 +28,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development Wiki
  */
+
 namespace VuFind\OAI;
 
 use SimpleXMLElement;
@@ -249,7 +251,7 @@ class Server
      *
      * @return void
      */
-    public function init(\Laminas\Config\Config $config, $baseURL, $params)
+    public function init(\Laminas\Config\Config $config, $baseURL, array $params)
     {
         $this->baseURL = $baseURL;
         $parts = parse_url($baseURL);
@@ -257,7 +259,7 @@ class Server
         if (isset($parts['port'])) {
             $this->baseHostURL .= $parts['port'];
         }
-        $this->params = isset($params) && is_array($params) ? $params : [];
+        $this->params = $params;
         $this->initializeSettings($config); // Load config.ini settings
     }
 
@@ -316,19 +318,19 @@ class Server
             return $this->showError('badVerb', 'Missing Verb Argument');
         } else {
             switch ($this->params['verb']) {
-            case 'GetRecord':
-                return $this->getRecord();
-            case 'Identify':
-                return $this->identify();
-            case 'ListIdentifiers':
-            case 'ListRecords':
-                return $this->listRecords($this->params['verb']);
-            case 'ListMetadataFormats':
-                return $this->listMetadataFormats();
-            case 'ListSets':
-                return $this->listSets();
-            default:
-                return $this->showError('badVerb', 'Illegal OAI Verb');
+                case 'GetRecord':
+                    return $this->getRecord();
+                case 'Identify':
+                    return $this->identify();
+                case 'ListIdentifiers':
+                case 'ListRecords':
+                    return $this->listRecords($this->params['verb']);
+                case 'ListMetadataFormats':
+                    return $this->listMetadataFormats();
+                case 'ListSets':
+                    return $this->listSets();
+                default:
+                    return $this->showError('badVerb', 'Illegal OAI Verb');
             }
         }
     }
@@ -344,7 +346,7 @@ class Server
      */
     protected function attachDeleted($xml, $tracker, $headerOnly = false)
     {
-        // Deleted records only have a header, no metadata.  However, depending
+        // Deleted records only have a header, no metadata. However, depending
         // on the context we are attaching them, they may or may not need a
         // <record> tag wrapping the header.
         $record = $headerOnly ? $xml : $xml->addChild('record');
@@ -640,7 +642,7 @@ class Server
         if ($this->supportsVuFindMetadata()) {
             $this->metadataFormats['oai_vufind_json'] = [
                 'schema' => 'https://vufind.org/xsd/oai_vufind_json-1.0.xsd',
-                'namespace' => 'http://vufind.org/oai_vufind_json-1.0'
+                'namespace' => 'http://vufind.org/oai_vufind_json-1.0',
             ];
         } else {
             unset($this->metadataFormats['oai_vufind_json']);
@@ -661,7 +663,7 @@ class Server
     }
 
     /**
-     * Load data from the OAI section of config.ini.  (This is called by the
+     * Load data from the OAI section of config.ini. (This is called by the
      * constructor and is only a separate method to allow easy override by child
      * classes).
      *
@@ -754,7 +756,8 @@ class Server
         $response = $this->createResponse();
         $xml = $response->addChild('ListMetadataFormats');
         foreach ($this->getMetadataFormats() as $prefix => $details) {
-            if ($record === false
+            if (
+                $record === false
                 || $record->getXML($prefix) !== false
                 || ('oai_vufind_json' === $prefix && $this->supportsVuFindMetadata())
             ) {
@@ -795,7 +798,7 @@ class Server
             return $this->showError($parts[0], $parts[1]);
         }
 
-        // Normalize the provided dates into Unix timestamps.  Depending on whether
+        // Normalize the provided dates into Unix timestamps. Depending on whether
         // they come from the OAI-PMH request or the database, the format may be
         // slightly different; this ensures they are reduced to a consistent value!
         $from = $this->normalizeDate($params['from']);
@@ -867,7 +870,8 @@ class Server
 
         // If our cursor didn't reach the last record, we need a resumption token!
         $listSize = $deletedCount + $nonDeletedCount;
-        if ($listSize > $currentCursor
+        if (
+            $listSize > $currentCursor
             && ('' === $cursorMark || $nextCursorMark !== $cursorMark)
         ) {
             $this->saveResumptionToken(
@@ -914,7 +918,7 @@ class Server
 
         // Load set field if applicable:
         if (null !== $this->setField) {
-            // If we got this far, we can load all available set values.  For now,
+            // If we got this far, we can load all available set values. For now,
             // we'll assume that this list is short enough to load in one response;
             // it may be necessary to implement a resumption token mechanism if this
             // proves not to be the case:
@@ -1088,7 +1092,8 @@ class Server
             // Set default date range if not already provided:
             if (empty($params['from'])) {
                 $params['from'] = $this->earliestDatestamp;
-                if (!empty($params['until'])
+                if (
+                    !empty($params['until'])
                     && strlen($params['from']) > strlen($params['until'])
                 ) {
                     $params['from'] = substr($params['from'], 0, 10);
@@ -1107,14 +1112,16 @@ class Server
 
         // If no set field is configured and a set parameter comes in, we have a
         // problem:
-        if (null === $this->setField && empty($this->setQueries)
+        if (
+            null === $this->setField && empty($this->setQueries)
             && !empty($params['set'])
         ) {
             throw new \Exception('noSetHierarchy:Sets not supported');
         }
 
         // Validate set parameter:
-        if (!empty($params['set']) && null === $this->setField
+        if (
+            !empty($params['set']) && null === $this->setField
             && !isset($this->setQueries[$params['set']])
         ) {
             throw new \Exception('badArgument:Invalid set specified');
@@ -1393,7 +1400,7 @@ class Server
         // Prefix?  Strip it off and return the stripped version if valid:
         $prefix = 'oai:' . $this->idNamespace . ':';
         $prefixLen = strlen($prefix);
-        if (!empty($prefix) && substr($id, 0, $prefixLen) == $prefix) {
+        if (substr($id, 0, $prefixLen) == $prefix) {
             return substr($id, $prefixLen);
         }
 

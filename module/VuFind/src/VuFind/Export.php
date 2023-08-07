@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Export support class
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Site
  */
+
 namespace VuFind;
 
 use Laminas\Config\Config;
@@ -115,25 +117,25 @@ class Export
         foreach ($matches[1] as $current) {
             $parts = explode('|', $current);
             switch ($parts[0]) {
-            case 'config':
-            case 'encodedConfig':
-                if (isset($this->mainConfig->{$parts[1]}->{$parts[2]})) {
-                    $value = $this->mainConfig->{$parts[1]}->{$parts[2]};
-                } else {
-                    $value = $parts[3];
-                }
-                if ($parts[0] == 'encodedConfig') {
-                    $value = urlencode($value);
-                }
-                $template = str_replace('{' . $current . '}', $value, $template);
-                break;
-            case 'encodedCallback':
-                $template = str_replace(
-                    '{' . $current . '}',
-                    urlencode($callback),
-                    $template
-                );
-                break;
+                case 'config':
+                case 'encodedConfig':
+                    if (isset($this->mainConfig->{$parts[1]}->{$parts[2]})) {
+                        $value = $this->mainConfig->{$parts[1]}->{$parts[2]};
+                    } else {
+                        $value = $parts[3];
+                    }
+                    if ($parts[0] == 'encodedConfig') {
+                        $value = urlencode($value);
+                    }
+                    $template = str_replace('{' . $current . '}', $value, $template);
+                    break;
+                case 'encodedCallback':
+                    $template = str_replace(
+                        '{' . $current . '}',
+                        urlencode($callback),
+                        $template
+                    );
+                    break;
             }
         }
         return $template;
@@ -173,6 +175,9 @@ class Export
                 },
                 $ns
             );
+            if (empty($parts)) {
+                return '';
+            }
             foreach ($parts as $part) {
                 // Convert text into XML object:
                 $current = simplexml_load_string($part);
@@ -237,7 +242,7 @@ class Export
 
     /**
      * Get an array of strings representing formats in which a specified record's
-     * data may be exported (empty if none).  Legal values: "BibTeX", "EndNote",
+     * data may be exported (empty if none). Legal values: "BibTeX", "EndNote",
      * "MARC", "MARCXML", "RDF", "RefWorks".
      *
      * @param \VuFind\RecordDriver\AbstractBase $driver Record driver
@@ -253,7 +258,8 @@ class Export
         // Loop through all possible formats:
         $formats = [];
         foreach (array_keys($this->exportConfig->toArray()) as $format) {
-            if (in_array($format, $active)
+            if (
+                in_array($format, $active)
                 && $this->recordSupportsFormat($driver, $format)
             ) {
                 $formats[] = $format;
@@ -343,7 +349,8 @@ class Export
 
             $active = [];
             foreach ($formatSettings as $format => $allowedContexts) {
-                if (strpos($allowedContexts, $context) !== false
+                if (
+                    str_contains($allowedContexts, $context)
                     || ($context == 'record' && $allowedContexts == 1)
                 ) {
                     $active[] = $format;
@@ -351,14 +358,16 @@ class Export
             }
 
             // for legacy settings [BulkExport]
-            if ($context == 'bulk'
+            if (
+                $context == 'bulk'
                 && isset($this->mainConfig->BulkExport->enabled)
                 && $this->mainConfig->BulkExport->enabled
                 && isset($this->mainConfig->BulkExport->options)
             ) {
                 $config = explode(':', $this->mainConfig->BulkExport->options);
                 foreach ($config as $option) {
-                    if (isset($this->mainConfig->Export->$option)
+                    if (
+                        isset($this->mainConfig->Export->$option)
                         && $this->mainConfig->Export->$option == true
                     ) {
                         $active[] = $option;

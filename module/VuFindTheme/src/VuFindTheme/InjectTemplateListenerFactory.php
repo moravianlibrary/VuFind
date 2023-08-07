@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Factory for InjectTemplateListener
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) 2019 Leipzig University Library
  *
@@ -25,13 +26,14 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU GPLv2
  * @link     https://vufind.org Main Site
  */
+
 namespace VuFindTheme;
 
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
 use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
 use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerExceptionInterface as ContainerException;
+use Psr\Container\ContainerInterface;
 
 /**
  * Factory for InjectTemplateListener
@@ -82,7 +84,7 @@ class InjectTemplateListenerFactory implements FactoryInterface
             array_merge($prefixes, $modules),
             function ($prefix) use ($exclude) {
                 foreach ($exclude as $current) {
-                    if (strpos($prefix, $current) === 0) {
+                    if (str_starts_with($prefix, $current)) {
                         return false;
                     }
                 }

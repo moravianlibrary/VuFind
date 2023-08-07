@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Amicus ILS Driver
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Scanbit 2011.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
+
 namespace VuFind\ILS\Driver;
 
 use PDO;
@@ -110,9 +112,9 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
      */
     protected function pickStatus($statusArray)
     {
-        // This array controls the rankings of possible status messages.  The lower
+        // This array controls the rankings of possible status messages. The lower
         // the ID in the ITEM_STATUS_TYPE table, the higher the priority of the
-        // message.  We only need to load it once -- after that, it's cached in the
+        // message. We only need to load it once -- after that, it's cached in the
         // driver.
         if ($this->statusRankings == false) {
             // Execute SQL
@@ -143,7 +145,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
 
     /**
      * Support method to take an array of status strings and determine
-     * whether or not this indicates an available item.  Returns an array with
+     * whether or not this indicates an available item. Returns an array with
      * two keys: 'available', the boolean availability status, and 'otherStatuses',
      * every status code found other than "Not Charged" - for use with _pickStatus().
      *
@@ -153,7 +155,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
      */
     protected function determineAvailability($statusArray)
     {
-        // It's possible for a record to have multiple status codes.  We
+        // It's possible for a record to have multiple status codes. We
         // need to loop through in search of the "Not Charged" (i.e. on
         // shelf) status, collecting any other statuses we find along the
         // way...
@@ -161,12 +163,12 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
         $otherStatuses = [];
         foreach ($statusArray as $status) {
             switch ($status) {
-            case 'Disponible':
-                $notCharged = true;
-                break;
-            default:
-                $otherStatuses[] = $status;
-                break;
+                case 'Disponible':
+                    $notCharged = true;
+                    break;
+                default:
+                    $otherStatuses[] = $status;
+                    break;
             }
         }
 
@@ -291,7 +293,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
     {
         // There are two possible queries we can use to obtain status information.
         // The first (and most common) obtains information from a combination of
-        // items and holdings records.  The second (a rare case) obtains
+        // items and holdings records. The second (a rare case) obtains
         // information from the holdings record when no items are available.
 
         $items = "select BIB_ITM_NBR, ILL_CDE as ON_RESERVE, " .
@@ -314,6 +316,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
             $this->throwAsIlsException($e);
         }
 
+        $multiple = '';
         // Read results
         while ($row = $sqlStmt->fetch(PDO::FETCH_ASSOC)) {
             $multiple = $row['MULTIPLE'];
@@ -350,7 +353,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
                             'status_array' => [$prestados],
                             'location' => $textoLoc,
                             'reserve' => $reservados,
-                            'callnumber' => $textoSign
+                            'callnumber' => $textoSign,
                         ];
                     } else {
                         $multiple = $row['LOCATION'];
@@ -366,7 +369,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
                             'status_array' => [$prestados],
                             'location' => $multiple,
                             'reserve' => $reservados,
-                            'callnumber' => $row['CALLNUMBER']
+                            'callnumber' => $row['CALLNUMBER'],
                         ];
                     }
                 } else {
@@ -385,7 +388,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
                     'status_array' => [$prestados],
                     'location' => $this->translate("No copies"),
                     'reserve' => $reservados,
-                    'callnumber' => $this->translate("No copies")
+                    'callnumber' => $this->translate("No copies"),
                 ];
                 break;
             }
@@ -503,7 +506,7 @@ class Amicus extends AbstractBase implements TranslatorAwareInterface
                     'returnDate' => false,
                     'number' => count($data) + 1,
                     'item_id' => $row['CPY_ID_NBR'],
-                    'barcode' => $row['BRCDE_NBR']
+                    'barcode' => $row['BRCDE_NBR'],
                 ];
                 $data[] = $currentItem;
             }

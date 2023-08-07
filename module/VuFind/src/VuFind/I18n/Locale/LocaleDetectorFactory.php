@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Locale Detector Delegator Factory
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2018,
  *               Leipzig University Library <info@ub.uni-leipzig.de> 2018.
@@ -27,16 +28,16 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Site
  */
+
 namespace VuFind\I18n\Locale;
 
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
 use Laminas\EventManager\EventInterface;
 use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
 use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\DelegatorFactoryInterface;
+use Psr\Container\ContainerExceptionInterface as ContainerException;
+use Psr\Container\ContainerInterface;
 use SlmLocale\LocaleEvent;
-use SlmLocale\Strategy\CookieStrategy;
 use SlmLocale\Strategy\QueryStrategy;
 use VuFind\Cookie\CookieManager;
 
@@ -79,7 +80,7 @@ class LocaleDetectorFactory implements DelegatorFactoryInterface
         // TODO: implement mappings in the future?
         //$detector->setMappings($settings->getMappedLocales());
 
-        foreach ($this->getStrategies() as $strategy) {
+        foreach ($this->getStrategies($settings) as $strategy) {
             $detector->addStrategy($strategy);
         }
 
@@ -87,7 +88,10 @@ class LocaleDetectorFactory implements DelegatorFactoryInterface
         $detector->getEventManager()->attach(
             LocaleEvent::EVENT_FOUND,
             function (EventInterface $event) use ($cookies) {
-                $cookies->set('language', $event->getParam('locale'));
+                $language = $event->getParam('locale');
+                if ($language !== $cookies->get('language')) {
+                    $cookies->set('language', $language);
+                }
             }
         );
 
@@ -97,9 +101,11 @@ class LocaleDetectorFactory implements DelegatorFactoryInterface
     /**
      * Generator for retrieving strategies.
      *
+     * @param ?LocaleSettings $settings Locale settings
+     *
      * @return \Generator
      */
-    protected function getStrategies(): \Generator
+    protected function getStrategies(LocaleSettings $settings = null): \Generator
     {
         yield new LocaleDetectorParamStrategy();
 
@@ -107,10 +113,15 @@ class LocaleDetectorFactory implements DelegatorFactoryInterface
         $queryStrategy->setOptions(['query_key' => 'lng']);
         yield $queryStrategy;
 
-        $cookieStrategy = new CookieStrategy();
+        $cookieStrategy = new LocaleDetectorCookieStrategy();
         $cookieStrategy->setCookieName('language');
         yield $cookieStrategy;
 
-        yield new \SlmLocale\Strategy\HttpAcceptLanguageStrategy();
+        // By default, we want to use the HTTP Accept header, so we'll add that
+        // strategy when no settings are provided, or when the settings tell us
+        // that browser language detection should be used.
+        if (!$settings || $settings->browserLanguageDetectionEnabled()) {
+            yield new \SlmLocale\Strategy\HttpAcceptLanguageStrategy();
+        }
     }
 }

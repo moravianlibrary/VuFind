@@ -1,8 +1,9 @@
 <?php
+
 /**
  * "Search tabs" view helper
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  * Copyright (C) The National Library of Finland 2015-2016.
@@ -27,6 +28,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development Wiki
  */
+
 namespace VuFind\View\Helper\Root;
 
 use Laminas\Http\Request;
@@ -34,6 +36,7 @@ use Laminas\View\Helper\Url;
 use VuFind\Search\Base\Results;
 use VuFind\Search\Results\PluginManager;
 use VuFind\Search\SearchTabsHelper;
+use VuFind\Search\UrlQueryHelper;
 
 /**
  * "Search tabs" view helper
@@ -120,6 +123,8 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
         $retVal = ['tabs' => []];
         $allFilters = $this->helper->getTabFilterConfig();
         $allPermissions = $this->helper->getTabPermissionConfig();
+        $allSettings = $this->helper->getSettings();
+        $retVal['showCounts'] = $allSettings['show_result_counts'] ?? false;
         foreach ($this->helper->getTabConfig() as $key => $label) {
             $permissionName = null;
             if (isset($allPermissions[$key])) {
@@ -127,7 +132,8 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
             }
             $class = $this->helper->extractClassName($key);
             $filters = isset($allFilters[$key]) ? (array)$allFilters[$key] : [];
-            if ($class == $activeSearchClass
+            if (
+                $class == $activeSearchClass
                 && $this->helper->filtersMatch($class, $hiddenFilters, $filters)
             ) {
                 $retVal['selected'] = $this
@@ -168,16 +174,6 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
                     $filters,
                     $permissionName
                 );
-            }
-        }
-        if (!isset($retVal['selected']) && !empty($retVal['tabs'])) {
-            // Make the first tab for the given search class selected
-            foreach ($retVal['tabs'] as &$tab) {
-                if ($tab['class'] == $activeSearchClass) {
-                    $retVal['selected'] = $tab;
-                    $tab['selected'] = true;
-                    break;
-                }
             }
         }
 
@@ -244,8 +240,7 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
     ) {
         if (!isset($this->cachedHiddenFilterParams[$searchClassId])) {
             $view = $this->getView();
-            $searchTabs = $view->plugin('searchTabs');
-            $hiddenFilters = $searchTabs->getHiddenFilters(
+            $hiddenFilters = $this->getHiddenFilters(
                 $searchClassId,
                 $ignoreHiddenFilterMemory
             );
@@ -253,21 +248,29 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
                 $hiddenFilters = $view->plugin('searchMemory')
                     ->getLastHiddenFilters($searchClassId);
                 if (empty($hiddenFilters)) {
-                    $hiddenFilters = $searchTabs->getHiddenFilters($searchClassId);
+                    $hiddenFilters = $this->getHiddenFilters($searchClassId);
                 }
             }
-            $hiddenFilterParams = [];
-            foreach ($hiddenFilters as $key => $filter) {
+
+            $results = $this->results->get($searchClassId);
+            $params = $results->getParams();
+            foreach ($hiddenFilters as $field => $filter) {
                 foreach ($filter as $value) {
-                    $hiddenFilterParams[] = urlencode('hiddenFilters[]') . '='
-                        . urlencode("$key:$value");
+                    $params->addHiddenFilterForField($field, $value);
                 }
             }
-            $this->cachedHiddenFilterParams[$searchClassId]
-                = implode('&amp;', $hiddenFilterParams);
+            if ($hiddenFilters = $params->getHiddenFiltersAsQueryParams()) {
+                $this->cachedHiddenFilterParams[$searchClassId]
+                    = UrlQueryHelper::buildQueryString(
+                        [
+                            'hiddenFilters' => $hiddenFilters,
+                        ]
+                    );
+            } else {
+                $this->cachedHiddenFilterParams[$searchClassId] = '';
+            }
         }
-        return $this->cachedHiddenFilterParams[$searchClassId]
-            ? $prepend . $this->cachedHiddenFilterParams[$searchClassId] : '';
+        return $prepend . $this->cachedHiddenFilterParams[$searchClassId];
     }
 
     /**
@@ -287,7 +290,7 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
             'class' => $class,
             'label' => $label,
             'permission' => $permissionName,
-            'selected' => true
+            'selected' => true,
         ];
     }
 
@@ -347,7 +350,7 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
             'label' => $label,
             'permission' => $permissionName,
             'selected' => false,
-            'url' => $newUrl
+            'url' => $newUrl,
         ];
     }
 
@@ -375,7 +378,7 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
             'label' => $label,
             'permission' => $permissionName,
             'selected' => false,
-            'url' => $url
+            'url' => $url,
         ];
     }
 
@@ -410,7 +413,7 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
             'label' => $label,
             'permission' => $permissionName,
             'selected' => false,
-            'url' => $url
+            'url' => $url,
         ];
     }
 
@@ -419,17 +422,29 @@ class SearchTabs extends \Laminas\View\Helper\AbstractHelper
      *
      * @param Results $results Search results
      * @param array   $filters Filters
+     * @param string  $prepend String to prepend to the hidden filters if they're not
+     * empty
      *
      * @return string Query parameters
      */
-    protected function buildUrlHiddenFilters(Results $results, $filters)
-    {
+    protected function buildUrlHiddenFilters(
+        Results $results,
+        array $filters,
+        string $prepend = '?'
+    ): string {
         // Set up results object for URL building:
         $params = $results->getParams();
         foreach ($filters as $filter) {
             $params->addHiddenFilter($filter);
         }
-        $urlParams = $results->getUrlQuery()->getParams(false);
-        return $urlParams !== '?' ? $urlParams : '';
+        if ($hiddenFilters = $params->getHiddenFiltersAsQueryParams()) {
+            return $prepend . UrlQueryHelper::buildQueryString(
+                [
+                    'hiddenFilters' => $hiddenFilters,
+                ],
+                false
+            );
+        }
+        return '';
     }
 }

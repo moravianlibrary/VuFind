@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Abstract options search model.
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Villanova University 2010.
  *
@@ -25,6 +26,7 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org Main Page
  */
+
 namespace VuFind\Search\Base;
 
 use Laminas\Config\Config;
@@ -186,6 +188,27 @@ abstract class Options implements TranslatorAwareInterface
     protected $translatedFacetsTextDomains = [];
 
     /**
+     * Formats for translated facets
+     *
+     * @var array
+     */
+    protected $translatedFacetsFormats = [];
+
+    /**
+     * Hierarchical facets
+     *
+     * @var array
+     */
+    protected $hierarchicalFacets = [];
+
+    /**
+     * Hierarchical facet separators
+     *
+     * @var array
+     */
+    protected $hierarchicalFacetSeparators = [];
+
+    /**
      * Spelling setting
      *
      * @var bool
@@ -296,9 +319,8 @@ abstract class Options implements TranslatorAwareInterface
         $id = $this->getSearchClassId();
         $facetSettings = $configLoader->get($this->facetsIni);
         if (isset($facetSettings->AvailableFacetSortOptions[$id])) {
-            foreach ($facetSettings->AvailableFacetSortOptions[$id]->toArray()
-                     as $facet => $sortOptions
-            ) {
+            $sortArray = $facetSettings->AvailableFacetSortOptions[$id]->toArray();
+            foreach ($sortArray as $facet => $sortOptions) {
                 $this->facetSortOptions[$facet] = [];
                 foreach (explode(',', $sortOptions) as $fieldAndLabel) {
                     [$field, $label] = explode('=', $fieldAndLabel);
@@ -386,7 +408,8 @@ abstract class Options implements TranslatorAwareInterface
      */
     public function getLabelForBasicHandler($handler)
     {
-        return $this->basicHandlers[$handler] ?? false;
+        $handlers = $this->getBasicHandlers();
+        return $handlers[$handler] ?? false;
     }
 
     /**
@@ -642,7 +665,8 @@ abstract class Options implements TranslatorAwareInterface
     public function setTranslatedFacets($facets)
     {
         // Reset properties:
-        $this->translatedFacets = $this->translatedFacetsTextDomains = [];
+        $this->translatedFacets = $this->translatedFacetsTextDomains
+            = $this->translatedFacetsFormats = [];
 
         // Fill in new data:
         foreach ($facets as $current) {
@@ -650,6 +674,9 @@ abstract class Options implements TranslatorAwareInterface
             $this->translatedFacets[] = $parts[0];
             if (isset($parts[1])) {
                 $this->translatedFacetsTextDomains[$parts[0]] = $parts[1];
+            }
+            if (isset($parts[2])) {
+                $this->translatedFacetsFormats[$parts[0]] = $parts[2];
             }
         }
     }
@@ -665,6 +692,39 @@ abstract class Options implements TranslatorAwareInterface
     public function getTextDomainForTranslatedFacet($field)
     {
         return $this->translatedFacetsTextDomains[$field] ?? 'default';
+    }
+
+    /**
+     * Look up the format for use when translating a particular facet
+     * field.
+     *
+     * @param string $field Field name being translated
+     *
+     * @return string
+     */
+    public function getFormatForTranslatedFacet($field)
+    {
+        return $this->translatedFacetsFormats[$field] ?? null;
+    }
+
+    /**
+     * Get hierarchical facet fields.
+     *
+     * @return array
+     */
+    public function getHierarchicalFacets()
+    {
+        return $this->hierarchicalFacets;
+    }
+
+    /**
+     * Get hierarchical facet separators.
+     *
+     * @return array
+     */
+    public function getHierarchicalFacetSeparators()
+    {
+        return $this->hierarchicalFacetSeparators;
     }
 
     /**
@@ -875,8 +935,7 @@ abstract class Options implements TranslatorAwareInterface
 
     /**
      * If there is a limit to how many search results a user can access, this
-     * method will return that limit.  If there is no limit, this will return
-     * -1.
+     * method will return that limit. If there is no limit, this will return -1.
      *
      * @return int
      */
@@ -904,7 +963,7 @@ abstract class Options implements TranslatorAwareInterface
     }
 
     /**
-     * Load all recommendation settings from the relevant ini file.  Returns an
+     * Load all recommendation settings from the relevant ini file. Returns an
      * associative array where the key is the location of the recommendations (top
      * or side) and the value is the settings found in the file (which may be either
      * a single string or an array of strings).
@@ -923,7 +982,8 @@ abstract class Options implements TranslatorAwareInterface
         // otherwise:
         $recommend = [];
 
-        if (null !== $handler
+        if (
+            null !== $handler
             && isset($searchSettings->TopRecommendations->$handler)
         ) {
             $recommend['top'] = $searchSettings->TopRecommendations
@@ -934,7 +994,8 @@ abstract class Options implements TranslatorAwareInterface
                 ? $searchSettings->General->default_top_recommend->toArray()
                 : false;
         }
-        if (null !== $handler
+        if (
+            null !== $handler
             && isset($searchSettings->SideRecommendations->$handler)
         ) {
             $recommend['side'] = $searchSettings->SideRecommendations
@@ -945,7 +1006,8 @@ abstract class Options implements TranslatorAwareInterface
                 ? $searchSettings->General->default_side_recommend->toArray()
                 : false;
         }
-        if (null !== $handler
+        if (
+            null !== $handler
             && isset($searchSettings->NoResultsRecommendations->$handler)
         ) {
             $recommend['noresults'] = $searchSettings->NoResultsRecommendations
@@ -969,7 +1031,18 @@ abstract class Options implements TranslatorAwareInterface
     public function getSearchClassId()
     {
         // Parse identifier out of class name of format VuFind\Search\[id]\Options:
-        $class = explode('\\', get_class($this));
+        $className = get_class($this);
+        $class = explode('\\', $className);
+
+        // Special case: if there's an unexpected number of parts, we may be testing
+        // with a mock object; if so, that's okay, but anything else is unexpected.
+        if (count($class) !== 4) {
+            if ('Mock_' === substr($className, 0, 5)) {
+                return 'Mock';
+            }
+            throw new \Exception("Unexpected class name: {$className}");
+        }
+
         return $class[2];
     }
 
@@ -1034,6 +1107,6 @@ abstract class Options implements TranslatorAwareInterface
         $limits = $facetSettings->Advanced_Settings->limitOrderOverride ?? null;
         $delimiter = $facetSettings->Advanced_Settings->limitDelimiter ?? '::';
         $limitConf = $limits ? $limits->get($limit) : '';
-        return array_map('trim', explode($delimiter, $limitConf));
+        return array_map('trim', explode($delimiter, $limitConf ?? ''));
     }
 }

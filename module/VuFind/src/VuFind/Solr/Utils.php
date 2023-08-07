@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Solr Utility Functions
  *
- * PHP version 7
+ * PHP version 8
  *
  * Copyright (C) Andrew Nagy 2009.
  *
@@ -25,13 +26,14 @@
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development Wiki
  */
+
 namespace VuFind\Solr;
 
 /**
  * Solr Utility Functions
  *
  * This class is designed to hold Solr-related support methods that may
- * be called statically.  This allows sharing of some Solr-related logic
+ * be called statically. This allows sharing of some Solr-related logic
  * between the Solr and Summon classes.
  *
  * @category VuFind
@@ -81,7 +83,8 @@ class Utils
             }
 
             // Check for month/year or month-year formats:
-            if (preg_match('/([0-9])(-|\/)([0-9]{4})/', $date, $matches)
+            if (
+                preg_match('/([0-9])(-|\/)([0-9]{4})/', $date, $matches)
                 || preg_match('/([0-9]{2})(-|\/)([0-9]{4})/', $date, $matches)
             ) {
                 $month = $matches[1];
