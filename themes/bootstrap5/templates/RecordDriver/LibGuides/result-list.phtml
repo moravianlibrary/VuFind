@@ -1,0 +1,14 @@
+<?php
+  $url = $this->driver->getUniqueId();
+?>
+<div class="media">
+  <div class="media-body">
+    <div class="resultItemLine1">
+      <h2>
+        <a href="<?=$this->escapeHtmlAttr($url)?>" class="title">
+          <?=$this->record($this->driver)->getTitleHtml()?>
+        </a>
+      </h2>
+    </div>
+  </div>
+</div>
