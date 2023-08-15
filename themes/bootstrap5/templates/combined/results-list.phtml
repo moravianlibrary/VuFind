@@ -32,7 +32,7 @@
 <?php endif; ?>
 
 <div class="clearfix">
-  <div class="pull-left flip help-block">
+  <div class="pull-left flip form-text">
     <?php if ($recordTotal > 0): ?>
       <?php foreach (($top = $results->getRecommendations('top')) as $current): ?>
         <?=$this->recommend($current)?>

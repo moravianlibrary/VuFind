@@ -17,7 +17,7 @@
   <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
     <?=$thumbnail ?>
   <?php endif; ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
     <h2>
       <b>
         <?=$this->record($this->driver)->getTitleHtml()?>
@@ -115,7 +115,7 @@
 
         <?php if (!$openUrlActive && empty($urls) && $this->driver->supportsAjaxStatus()): ?>
           <span class="status ajax-availability small">
-            <span class="label label-default"><?=$this->transEsc('loading_ellipsis')?></span>
+            <span class="badge text-bg-secondary"><?=$this->transEsc('loading_ellipsis')?></span>
           </span>
         <?php endif; ?>
       </div>

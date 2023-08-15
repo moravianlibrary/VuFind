@@ -16,7 +16,7 @@ $translator = function ($in) use ($that) {
 $serviceList = implode('', array_map($translator, $services));
 
 ?>
-<span class="label label-success services-<?=implode('-', $services)?>">
+<span class="badge text-bg-success services-<?=implode('-', $services)?>">
   <?=$serviceStatusMessage === $defaultServiceStatusMessage
       ? $this->translate($serviceStatusMessage, ['%%list%%' => $serviceList])
       : '<span class="service_' . $services[0] . '">' . $serviceStatusMessage . '</span>' ?>

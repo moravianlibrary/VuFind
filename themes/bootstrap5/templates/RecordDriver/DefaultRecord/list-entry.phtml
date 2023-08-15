@@ -27,11 +27,11 @@
   <input type="hidden" value="<?=$this->escapeHtmlAttr($id) ?>" class="hiddenId">
   <input type="hidden" value="<?=$this->escapeHtmlAttr($source) ?>" class="hiddenSource">
   <?=$this->record($this->driver)->getCheckbox()?>
-  <div class="media">
+  <div class="media d-flex">
     <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
       <?=$thumbnail ?>
     <?php endif; ?>
-    <div class="media-body">
+    <div class="media-body flex-grow-1 ms-3">
       <div class="result-body">
         <div class="resultItemLine1">
           <h2>

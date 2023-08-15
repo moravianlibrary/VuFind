@@ -13,11 +13,11 @@
     <?php $thumbnail = ob_get_contents(); ?>
   <?php ob_end_clean(); ?>
 <?php endif; ?>
-<div class="media">
+<div class="media d-flex">
   <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
     <?=$thumbnail ?>
   <?php endif ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
     <div class="resultItemLine1">
       <h2>
         <?php if ($url): ?><a href="<?=$this->escapeHtmlAttr($url)?>" class="title"><?php endif; ?>
@@ -27,7 +27,7 @@
     </div>
     <?php if (($sjr = $this->driver->getSjrValue()) && ($issn = $this->driver->getCleanISSN())): ?>
       <div class="resultItemLine2">
-        <a class="label label-default" href="http://www.scimagojr.com/journalsearch.php?q=<?=urlencode($issn)?>&amp;tip=iss">
+        <a class="badge text-bg-secondary" href="http://www.scimagojr.com/journalsearch.php?q=<?=urlencode($issn)?>&amp;tip=iss">
           SJR: <?=$this->escapeHtml($sjr)?>
         </a>
       </div>

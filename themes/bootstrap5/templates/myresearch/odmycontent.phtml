@@ -3,7 +3,7 @@
   $this->headTitle($this->translate('od_content'));
 
   // Set up breadcrumbs:
-  $this->layout()->breadcrumbs = '<li><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li> <li class="active">' . $this->transEsc('od_content') . '</li>';
+  $this->layout()->breadcrumbs = '<li class="breadcrumb-item"><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li> <li class="breadcrumb-item active">' . $this->transEsc('od_content') . '</li>';
 ?>
 
 <div class="<?=$this->layoutClass('mainbody')?>">
@@ -43,11 +43,11 @@
             <?php $thumbnail = ob_get_contents(); ?>
           <?php ob_end_clean(); ?>
         <?php endif; ?>
-        <div class="media">
+        <div class="media d-flex">
           <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
             <?=$thumbnail ?>
           <?php endif ?>
-          <div class="media-body">
+          <div class="media-body flex-grow-1 ms-3">
 
           <h4 property="name">
             <a href="<?=$this->escapeHtmlAttr($this->recordLinker()->getUrl($resource['record']))?>" class="title">
@@ -121,11 +121,11 @@
               <?php $thumbnail = ob_get_contents(); ?>
             <?php ob_end_clean(); ?>
           <?php endif; ?>
-          <div class="media">
+          <div class="media d-flex">
             <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
               <?=$thumbnail ?>
             <?php endif ?>
-            <div class="media-body">
+            <div class="media-body flex-grow-1 ms-3">
               <h4 property="name">
                 <a href="<?=$this->escapeHtmlAttr($this->recordLinker()->getUrl($resource['record']))?>" class="title">
                   <?=$this->escapeHtml($resource['record']->getTitle() . ' ' . $resource['record']->getSubtitle() . ' ' . $resource['record']->getTitleSection())?>

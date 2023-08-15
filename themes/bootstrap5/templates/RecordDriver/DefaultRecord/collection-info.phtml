@@ -1,5 +1,5 @@
 <?php $this->headScript()->appendFile('collection_record.js'); ?>
-<div class="media">
+<div class="media d-flex">
   <?php
     $QRCode = $this->record($this->driver)->getQRCode("core");
     $coverDetails = $this->record($this->driver)->getCoverDetails('collection-info', 'medium', $this->record($this->driver)->getThumbnail('large'));
@@ -7,7 +7,7 @@
     $preview = $this->record($this->driver)->getPreviews();
   ?>
   <?php if ($QRCode || $cover || $preview): ?>
-    <div class="media-left <?=$this->escapeHtmlAttr($coverDetails['size'])?>">
+    <div class="media-left flex-shrink-0 <?=$this->escapeHtmlAttr($coverDetails['size'])?>">
       <?php /* Display thumbnail if appropriate: */ ?>
       <?php if ($cover): ?>
         <?=$cover?>
@@ -23,7 +23,7 @@
       <?php if ($preview): ?><?=$preview?><?php endif; ?>
     </div>
   <?php endif; ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
 
     <h2><?=$this->escapeHtml($this->driver->getShortTitle() . ' ' . $this->driver->getSubtitle() . ' ' . $this->driver->getTitleSection())?></h2>
 

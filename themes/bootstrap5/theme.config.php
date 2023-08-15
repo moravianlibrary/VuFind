@@ -5,6 +5,7 @@ return [
         //'vendor/bootstrap.min.css',
         //'vendor/bootstrap-accessibility.css',
         'compiled.css',
+        'vendor/font-awesome.min.css',  //@todo add by sass
         'print.css:print',
     ],
     'js' => [
@@ -35,8 +36,7 @@ return [
          *   ['file' => 'example.js', 'conditional' => 'lt IE 10']
          */
         ['file' => 'vendor/jquery.min.js', 'priority' => 110],
-        ['file' => 'vendor/bootstrap.min.js', 'priority' => 120],
-        ['file' => 'vendor/bootstrap-accessibility.min.js', 'priority' => 130],
+        ['file' => 'vendor/bootstrap.bundle.min.js', 'priority' => 120],
         ['file' => 'vendor/validator.min.js', 'priority' => 140],
         ['file' => 'vendor/autocomplete.js', 'priority' => 220],
         ['file' => 'lib/ajax_request_queue.js', 'priority' => 230],
@@ -50,10 +50,10 @@ return [
      * Configuration for a single or multiple favicons.
      *
      * Can be a single string that is a path to an .ico icon relative to the theme image folder.
-     * 
+     *
      * For multiple favicons the value must be an array of arrays of attributes
      * that will be rendered as link elements.
-     * 
+     *
      * Example:
      *  [
      *      [

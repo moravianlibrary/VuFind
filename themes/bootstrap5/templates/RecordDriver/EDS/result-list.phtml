@@ -23,7 +23,7 @@
   <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
     <?=$thumbnail ?>
   <?php endif; ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
     <div class="result-body">
       <?php $items = $this->driver->getItems('result-list');
         if (isset($items) && !empty($items)):

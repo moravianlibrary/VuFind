@@ -42,7 +42,7 @@
 ?>
 <?php $tabConfig = $this->searchTabs()->getTabConfig($this->searchClassId, $this->lookfor, $this->searchIndex, $this->searchType, $hiddenFilters); ?>
 <?php if ($this->searchType == 'advanced'): ?>
-  <div class="navbar-form navbar-left flip">
+  <div class="form-inline">
     <?php $tabs = $this->context($this)->renderInContext('search/searchTabs', ['searchTabs' => $tabConfig['tabs'], 'showCounts' => false]); ?>
     <?php if (!empty($tabs)): ?><?=$tabs ?><div class="tab-content clearfix"><?php endif; ?>
       <p class="adv_search_terms"><?=$this->transEsc("Your search terms")?>: "<strong><?=$this->escapeHtml($this->lookfor)?></strong>"</p>
@@ -67,15 +67,14 @@
     <?php if (!empty($tabs)): ?></div><?php endif; ?>
   </div>
 <?php else: ?>
-  <form id="searchForm" class="searchForm navbar-form navbar-left flip" method="get" action="<?=$this->url($basicSearch)?>" name="searchForm" autocomplete="off">
+  <form id="searchForm" class="searchForm" method="get" action="<?=$this->url($basicSearch)?>" name="searchForm" autocomplete="off">
     <?= $this->context($this)->renderInContext('search/searchTabs', ['searchTabs' => $tabConfig['tabs'], 'showCounts' => $tabConfig['showCounts']]); ?>
+      <div class="d-flex">
     <?php $placeholder = $this->searchbox()->getPlaceholderText($tabConfig['selected']['id'] ?? null); ?>
-    <div class="searchForm-query">
-      <input id="searchForm_lookfor" class="searchForm_lookfor form-control search-query<?php if ($this->searchbox()->autocompleteEnabled($this->searchClassId)):?> autocomplete searcher:<?=$this->escapeHtmlAttr($this->searchClassId) ?><?=$this->searchbox()->autocompleteAutoSubmit($this->searchClassId) ? ' ac-auto-submit' : '' ?><?php endif ?>" type="search" name="lookfor" value="<?=$this->escapeHtmlAttr($this->lookfor)?>"<?php if ($placeholder): ?> placeholder="<?=$this->transEscAttr($placeholder) ?>"<?php endif ?> aria-label="<?=$this->transEscAttr("search_terms")?>">
-      <button id="searchForm-reset" class="searchForm-reset" type="reset" tabindex="-1" aria-label="<?=$this->transEsc('searchform_reset_button')?>"><?=$this->icon('ui-reset-search');?></button>
-    </div>
+      <input id="searchForm_lookfor" class="searchForm_lookfor form-control me-2 search-query<?php if ($this->searchbox()->autocompleteEnabled($this->searchClassId)):?> autocomplete searcher:<?=$this->escapeHtmlAttr($this->searchClassId) ?><?=$this->searchbox()->autocompleteAutoSubmit($this->searchClassId) ? ' ac-auto-submit' : '' ?><?php endif ?>" type="search" name="lookfor" value="<?=$this->escapeHtmlAttr($this->lookfor)?>"<?php if ($placeholder): ?> placeholder="<?=$this->transEscAttr($placeholder) ?>"<?php endif ?> aria-label="<?=$this->transEscAttr("search_terms")?>">
+      <?php /*<button id="searchForm-reset" class="searchForm-reset" type="reset" tabindex="-1" aria-label="<?=$this->transEsc('searchform_reset_button')?>"><?=$this->icon('ui-reset-search');?></button>*/ ?>
     <?php if ($handlerCount > 1): ?>
-      <select id="searchForm_type" class="searchForm_type form-control" name="type" data-native-menu="false" aria-label="<?=$this->transEscAttr("Search type")?>">
+      <select id="searchForm_type" class="searchForm_type form-select me-2" name="type" data-native-menu="false" aria-label="<?=$this->transEscAttr("Search type")?>">
         <?php $currentGroup = $insideGroup = false; ?>
         <?php foreach ($handlers as $handler): ?>
           <?php
@@ -101,7 +100,7 @@
     <?php elseif ($handlerCount == 1): ?>
       <input type="hidden" name="type" value="<?=$this->escapeHtmlAttr($handlers[0]['value'])?>">
     <?php endif; ?>
-    <button type="submit" class="btn btn-primary"><?=$this->icon('search') ?> <?=$this->transEsc("Find")?></button>
+    <button type="submit" class="btn btn-primary" style="white-space: nowrap;"><?=$this->icon('search') ?> <?=$this->transEsc("Find")?></button>
     <?php if ($advSearch): ?>
       <?php
         $advSearchQuery = $results ? ['edit' => $results->getSearchId()] : $hiddenFilters;
@@ -152,6 +151,7 @@
         echo '<input type="hidden" name="sort" value="' . $this->escapeHtmlAttr($lastSort) . '">';
       }
     ?>
+    </div>
     <?=$this->context($this)->renderInContext(
         'search/filters.phtml',
         [

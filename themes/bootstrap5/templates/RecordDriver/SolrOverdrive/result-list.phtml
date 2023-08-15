@@ -15,11 +15,11 @@
 <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getOverdriveID())?>" class="hiddenId">
 <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier())?>" class="hiddenSource">
 <input type="hidden" value="overdrive" class="handler-name">
-<div class="media" data-handler-name="overdrive">
+<div class="media d-flex" data-handler-name="overdrive">
   <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
     <?=$thumbnail ?>
   <?php endif ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
     <div class="result-body">
       <div>
         <a href="<?=$this->escapeHtmlAttr($recordLinker->getUrl($this->driver))?>" class="title getFull" data-view="<?=isset($this->params) ? $this->params->getOptions()->getListViewOption() : 'list' ?>">

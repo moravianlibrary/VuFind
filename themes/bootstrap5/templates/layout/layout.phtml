@@ -1,10 +1,9 @@
 <?=$this->doctype()?>
 
-<html lang="<?=$this->layout()->userLang?>"<?php if ($this->layout()->rtl): ?> dir="rtl"<?php endif; ?>>
+<html lang="<?=$this->layout()->userLang?>"<?php if ($this->layout()->rtl): ?> dir="rtl"<?php endif; ?> data-bs-theme="light">
   <head>
     <?php $this->setupThemeResources(); ?>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <?=$this->headMeta()?>
     <?=$this->googleTagManager()->getHeadCode()?>
 
@@ -126,10 +125,10 @@
       <a class="sr-only" href="#content"><?=$this->transEsc('Skip to content') ?></a>
       <?=$this->render('header.phtml')?>
     </header>
-    <nav class="breadcrumbs" aria-label="<?=$this->transEscAttr('Breadcrumbs') ?>">
+    <nav aria-label="<?=$this->transEscAttr('Breadcrumbs') ?>">
       <div class="container">
         <?php if (!empty($this->layout()->showBreadcrumbs ?? true) && !empty($this->layout()->breadcrumbs)): ?>
-          <ul class="breadcrumb hidden-print"><?=$this->layout()->breadcrumbs ?></ul>
+          <ol class="breadcrumb hidden-print"><?=$this->layout()->breadcrumbs ?></ol>
         <?php endif; ?>
       </div>
     </nav>

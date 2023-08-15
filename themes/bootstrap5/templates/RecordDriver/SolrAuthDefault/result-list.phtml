@@ -21,7 +21,7 @@
   <?php if ($thumbnail && $thumbnailAlignment === 'left'): ?>
     <?=$thumbnail ?>
   <?php endif ?>
-  <div class="media-body">
+  <div class="media-body flex-grow-1 ms-3">
     <div class="resultItemLine1">
       <h2>
         <a href="<?=$this->escapeHtmlAttr($recordLinker->getUrl($this->driver))?>" class="title"><?=$this->escapeHtml($heading)?></a>

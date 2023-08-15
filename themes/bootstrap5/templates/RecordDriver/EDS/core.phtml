@@ -8,8 +8,8 @@
     $coverDetails = $this->record($this->driver)->getCoverDetails('core', 'medium');
     $cover = $coverDetails['html'];
 ?>
-<div class="media" vocab="http://schema.org/" resource="#record" typeof="<?=$this->driver->getSchemaOrgFormats()?> Product">
-  <div class="media-left medium img-col">
+<div class="media d-flex" vocab="http://schema.org/" resource="#record" typeof="<?=$this->driver->getSchemaOrgFormats()?> Product">
+  <div class="media-left flex-shrink-0 medium img-col">
     <?php if ($cover): ?>
       <?=$cover?>
     <?php endif; ?>
@@ -56,7 +56,7 @@
       <?php endif; ?>
     </div>
   </div>
-  <div class="media-body info-col">
+  <div class="media-body flex-grow-1 ms-3 info-col">
     <h1 property="name"><?=$this->driver->getTitle()?></h1>
 
     <?php if ($this->driver->getExtraDetail('cached_record') && !$this->translationEmpty('cached_record_warning')): ?>

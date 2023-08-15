@@ -3,7 +3,7 @@
   $this->headTitle($this->translate('Checked Out Items'));
 
   // Set up breadcrumbs:
-  $this->layout()->breadcrumbs = '<li><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li> <li class="active">' . $this->transEsc('Checked Out Items') . '</li>';
+  $this->layout()->breadcrumbs = '<li class="breadcrumb-item"><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li> <li class="breadcrumb-item active">' . $this->transEsc('Checked Out Items') . '</li>';
 
   $this->headScript()->appendFile('checkouts.js');
 
@@ -123,11 +123,11 @@
               <?php $thumbnail = ob_get_contents(); ?>
             <?php ob_end_clean(); ?>
           <?php endif; ?>
-          <div class="media">
+          <div class="media d-flex">
             <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
               <?=$thumbnail ?>
             <?php endif ?>
-            <div class="media-body">
+            <div class="media-body flex-grow-1 ms-3">
               <?=$this->record($resource)->renderTemplate('account-entry.phtml')?>
               <?php if ($this->displayItemBarcode && !empty($ilsDetails['barcode'])): ?>
                 <strong><?=$this->transEsc('Barcode')?>:</strong> <?=$this->escapeHtml($ilsDetails['barcode'])?>

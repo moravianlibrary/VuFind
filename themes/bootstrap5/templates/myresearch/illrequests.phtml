@@ -3,8 +3,8 @@
     $this->headTitle($this->translate('Interlibrary Loan Requests'));
 
     // Set up breadcrumbs:
-    $this->layout()->breadcrumbs = '<li><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li>'
-        . '<li class="active">' . $this->transEsc('Interlibrary Loan Requests') . '</li>';
+    $this->layout()->breadcrumbs = '<li class="breadcrumb-item"><a href="' . $this->url('myresearch-home') . '">' . $this->transEsc('Your Account') . '</a></li>'
+        . '<li class="breadcrumb-item active">' . $this->transEsc('Interlibrary Loan Requests') . '</li>';
 
     $this->headScript()->appendFile('requests.js');
 ?>
@@ -72,11 +72,11 @@
               <?php $thumbnail = ob_get_contents(); ?>
             <?php ob_end_clean(); ?>
           <?php endif; ?>
-          <div class="media">
+          <div class="media d-flex">
             <?php if ($thumbnail && $thumbnailAlignment == 'left'): ?>
               <?=$thumbnail ?>
             <?php endif ?>
-            <div class="media-body">
+            <div class="media-body flex-grow-1 ms-3">
               <?=$this->record($resource)->renderTemplate('account-entry.phtml')?>
               <?php /* Depending on the ILS driver, the "location" value may be a string or an ID; figure out the best
                 value to display... */ ?>

@@ -9,4 +9,4 @@ a[href]:after{ content: ''; } /* hide following urls */
 .hidden-print * { display:none !important; }
 
 .bulkActionButtons,
-.action-toolbar { display: none !important; }
+.btn-toolbar { display: none !important; }

@@ -6,7 +6,7 @@
   $hasSubLinks = $this->exclude && !$this->facet['isApplied'];
   $hasCheckbox = $this->facet['operator'] === 'OR';
 
-  $classList = ['facet', 'js-facet-item'];
+  $classList = ['list-group-item', 'list-group-item-action', 'facet', 'js-facet-item'];
   if ($this->facet['isApplied']) {
     $classList[] = 'active';
   }

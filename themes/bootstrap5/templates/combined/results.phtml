@@ -25,7 +25,7 @@
   $combinedResults = $this->results;
 
   // Set up breadcrumbs:
-  $this->layout()->breadcrumbs = '<li class="active">' . $this->escapeHtml($headTitle) . '</li>';
+  $this->layout()->breadcrumbs = '<li class="breadcrumb-item active">' . $this->escapeHtml($headTitle) . '</li>';
 
   // Enable cart if appropriate:
   $this->showCartControls = $this->supportsCart && $this->cart()->isActive();

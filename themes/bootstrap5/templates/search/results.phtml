@@ -24,7 +24,7 @@
   );
 
   // Set up breadcrumbs:
-  $this->layout()->breadcrumbs .= '<li class="active">' . $this->escapeHtml($headTitle) . '</li>';
+  $this->layout()->breadcrumbs .= '<li class="breadcrumb-item active">' . $this->escapeHtml($headTitle) . '</li>';
 
   // Store search id:
   $this->layout()->searchId = $this->results->getSearchId();
